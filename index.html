@@ -832,7 +832,9 @@ function finalizarInventario(id,nome){
   // 1. Busca itens do lote
   sbGet('listas_itens?inventario_id=eq.'+encodeURIComponent(id)+'&select=sku,produto,cor,tamanho')
     .then(function(itensLote){
-      console.log('Itens do lote:', itensLote.length, JSON.stringify(itensLote.slice(0,2)));
+      // Garante que é array — Supabase pode retornar objeto de erro
+      if(!Array.isArray(itensLote)) itensLote = [];
+      console.log('Itens do lote:', itensLote.length);
       // 2. Busca contagens já realizadas neste inventário
       return sbGet('contagens?inventario=eq.'+encodeURIComponent(nome)+'&select=produto,cor,tamanho&limit=1000')
         .then(function(contagens){
