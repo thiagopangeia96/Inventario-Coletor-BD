@@ -616,6 +616,10 @@ function confirmarEanCelular(){
 
 function ocultarAlerta(){
   document.getElementById('alerta-item-diferente').style.display = 'none';
+  setTimeout(function(){
+    if(modoColetor) document.getElementById('inp-bipe').focus();
+    else document.getElementById('inp-ean-cel').focus();
+  }, 50);
 }
 
 function fecharLocalAtual(){
