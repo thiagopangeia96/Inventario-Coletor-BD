@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Pangeia · Monitor v2 · Supabase</title>
+<style>
+:root{
+  --roxo:#592C95;--roxo-esc:#3D1B6B;--roxo-cl:#AE76E5;
+  --lav:#E4D4F9;--lav-l:#F5EEFB;--brd:#D9C7F0;
+  --txt:#2A1655;--txt-s:#6B5B8E;
+  --ok:#0F6E56;--ok-bg:#dcfce7;--ok-txt:#166534;
+  --bad:#A32D2D;--bad-bg:#fee2e2;--bad-txt:#991b1b;
+  --warn-bg:#fef3c7;--warn-txt:#854d0e;
+  --azul:#1e40af;--azul-bg:#dbeafe;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,"Segoe UI",sans-serif;background:var(--lav-l);color:var(--txt);min-height:100vh;}
+
+/* LOGIN */
+#login-overlay{position:fixed;inset:0;background:var(--lav-l);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;}
+.login-box{background:#fff;border-radius:20px;border:1px solid var(--brd);padding:32px 24px;width:100%;max-width:380px;box-shadow:0 8px 32px rgba(89,44,149,.15);}
+.login-logo{text-align:center;margin-bottom:24px;}
+.login-logo .icon{font-size:44px;}
+.login-logo h1{font-size:20px;font-weight:800;color:var(--roxo);margin-top:8px;}
+.login-logo p{font-size:12px;color:var(--txt-s);margin-top:4px;}
+#login-erro{display:none;background:var(--bad-bg);color:var(--bad-txt);border-radius:8px;padding:10px 12px;font-size:12px;font-weight:700;margin-bottom:12px;text-align:center;}
+
+/* TOPBAR */
+.topbar{background:linear-gradient(135deg,var(--roxo),var(--roxo-esc));padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.topbar-title{font-size:15px;font-weight:800;color:#fff;}
+.topbar-sub{font-size:10px;color:rgba(255,255,255,.7);margin-top:1px;}
+
+/* PAGES */
+.page{display:none;padding:14px;max-width:800px;margin:0 auto;padding-bottom:70px;}
+.page.active{display:block;}
+.back-btn{display:flex;align-items:center;gap:6px;background:none;border:none;color:var(--roxo);font-size:13px;font-weight:700;cursor:pointer;padding:8px 0;margin-bottom:8px;}
+
+/* CARDS */
+.card{background:#fff;border-radius:14px;border:1px solid var(--brd);padding:14px 16px;margin-bottom:12px;box-shadow:0 2px 8px rgba(89,44,149,.06);}
+.card-title{font-size:11px;font-weight:800;color:var(--roxo);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;}
+
+/* SCANNER STEPS */
+.step{display:flex;align-items:center;gap:12px;padding:14px;border-radius:12px;border:2px solid var(--brd);margin-bottom:10px;background:#fff;transition:all .2s;}
+.step.active{border-color:var(--roxo);background:var(--lav-l);}
+.step.done{border-color:var(--ok);background:var(--ok-bg);}
+.step.skip{border-color:var(--brd);opacity:.5;}
+.step-num{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0;background:var(--brd);color:var(--txt-s);}
+.step.active .step-num{background:var(--roxo);color:#fff;}
+.step.done .step-num{background:var(--ok);color:#fff;}
+.step-info{flex:1;}
+.step-label{font-size:11px;font-weight:700;color:var(--txt-s);text-transform:uppercase;letter-spacing:.05em;}
+.step-value{font-size:14px;font-weight:700;color:var(--txt);margin-top:2px;}
+.step-sub{font-size:11px;color:var(--txt-s);margin-top:1px;}
+.step-icon{font-size:22px;}
+
+/* INPUT BIPE */
+.bipe-input{width:100%;padding:16px;border:2px solid var(--roxo);border-radius:12px;font-size:15px;font-family:inherit;outline:none;color:var(--txt);background:#fff;text-align:center;letter-spacing:1px;}
+.bipe-input::placeholder{color:#ccc;letter-spacing:0;font-size:13px;}
+.bipe-hint{text-align:center;font-size:11px;color:var(--txt-s);margin-top:6px;}
+
+/* PRODUTO CARD */
+.produto-card{background:linear-gradient(135deg,var(--roxo),var(--roxo-esc));border-radius:12px;padding:14px 16px;margin-bottom:12px;}
+.produto-card .pc-sku{font-size:10px;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.06em;}
+.produto-card .pc-nome{font-size:17px;font-weight:800;color:#fff;margin-top:2px;}
+.produto-card .pc-detalhes{display:flex;gap:10px;margin-top:8px;}
+.produto-card .pc-tag{background:rgba(255,255,255,.2);padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;color:#fff;}
+.produto-card.nao-cadastrado{background:linear-gradient(135deg,#854d0e,#713a07);}
+
+/* QTD */
+.qtd-wrap{background:var(--lav-l);border-radius:12px;padding:14px;text-align:center;}
+.qtd-wrap label{display:block;font-size:10px;font-weight:700;color:var(--txt-s);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;}
+.qtd-input{width:100%;padding:14px;border:2px solid var(--brd);border-radius:10px;font-size:40px;font-weight:800;text-align:center;color:var(--txt);outline:none;background:#fff;}
+.qtd-input:focus{border-color:var(--roxo);}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:13px 20px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;border:none;transition:all .15s;width:100%;justify-content:center;margin-top:4px;}
+.btn-primary{background:linear-gradient(135deg,var(--roxo),var(--roxo-esc));color:#fff;box-shadow:0 4px 14px rgba(89,44,149,.3);}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;}
+.btn-secondary{background:#fff;color:var(--roxo);border:1.5px solid var(--roxo);}
+.btn-danger{background:#fff;color:var(--bad-txt);border:1.5px solid #fca5a5;}
+.btn-sm{padding:7px 14px;font-size:11px;width:auto;}
+
+/* INVENTÁRIO CARD */
+.inv-card{background:#fff;border-radius:14px;border:2px solid var(--brd);padding:16px;margin-bottom:10px;cursor:pointer;transition:all .15s;display:flex;justify-content:space-between;align-items:center;}
+.inv-card:hover{border-color:var(--roxo);background:var(--lav-l);}
+.inv-nome{font-weight:800;font-size:15px;color:var(--txt);}
+.inv-meta{font-size:11px;color:var(--txt-s);margin-top:4px;}
+.inv-status{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;margin-top:6px;}
+.st-aberto{background:var(--ok-bg);color:var(--ok-txt);}
+.st-fechado{background:var(--bad-bg);color:var(--bad-txt);}
+
+/* HISTÓRICO */
+.reg-item{background:var(--lav-l);border-radius:10px;padding:10px 12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.reg-desc strong{display:block;font-size:13px;}
+.reg-desc span{font-size:11px;color:var(--txt-s);}
+.reg-qtd{background:var(--roxo);color:#fff;padding:4px 12px;border-radius:8px;font-weight:800;font-size:14px;white-space:nowrap;}
+
+/* BOTTOM NAV */
+#bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1.5px solid var(--brd);z-index:90;}
+.nav-inner{display:flex;max-width:800px;margin:0 auto;}
+.nav-btn{flex:1;padding:10px 4px;text-align:center;font-size:11px;font-weight:700;color:var(--txt-s);border:none;background:transparent;cursor:pointer;border-top:3px solid transparent;}
+.nav-btn.active{color:var(--roxo);border-top-color:var(--roxo);}
+.nav-btn .nav-icon{font-size:18px;display:block;margin-bottom:2px;}
+
+/* BADGE */
+#badge-fila{display:none;background:var(--warn-bg);color:var(--warn-txt);padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;}
+
+/* EMPTY */
+.empty{text-align:center;padding:32px 20px;color:var(--txt-s);}
+.empty .empty-icon{font-size:40px;margin-bottom:10px;}
+
+/* TOAST */
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1e1b4b;color:#fff;padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;max-width:340px;text-align:center;}
+.toast.show{opacity:1;}
+
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulsar{0%,100%{transform:scale(1)}50%{transform:scale(1.03);}}
+
+/* MODO COLETOR vs CELULAR */
+.modo-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;cursor:pointer;background:rgba(255,255,255,.2);color:#fff;border:none;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-overlay">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="icon">📡</div>
+      <h1>Pangeia · Monitor</h1>
+      <p>Bipagem por QR Code</p>
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="display:block;font-size:11px;font-weight:700;color:var(--txt-s);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Usuário</label>
+      <input type="text" id="login-user" placeholder="Seu usuário" autocomplete="username"
+             style="width:100%;padding:11px 14px;border:1.5px solid var(--brd);border-radius:10px;font-size:14px;font-family:inherit;outline:none;color:var(--txt);"
+             onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+    </div>
+    <div style="margin-bottom:14px;">
+      <label style="display:block;font-size:11px;font-weight:700;color:var(--txt-s);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Senha</label>
+      <input type="password" id="login-pass" placeholder="Sua senha"
+             style="width:100%;padding:11px 14px;border:1.5px solid var(--brd);border-radius:10px;font-size:14px;font-family:inherit;outline:none;color:var(--txt);"
+             onkeydown="if(event.key==='Enter')fazerLogin()">
+    </div>
+    <div id="login-erro"></div>
+    <button class="btn btn-primary" id="btn-login" onclick="fazerLogin()">Entrar</button>
+  </div>
+</div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div>
+    <div class="topbar-title">📡 Pangeia · Monitor v2</div>
+    <div class="topbar-sub" id="topbar-nome"></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <span id="badge-fila"></span>
+    <button class="modo-badge" onclick="alternarModo()" id="modo-badge-btn">📱 Celular</button>
+    <div id="statusConn" style="padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;background:var(--bad-bg);color:var(--bad-txt);">⚡</div>
+  </div>
+</div>
+
+<!-- PAGE: INVENTÁRIOS -->
+<div class="page active" id="page-inventarios">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;margin-top:4px;">
+    <div style="font-size:16px;font-weight:800;color:var(--txt);">Inventários</div>
+    <button class="btn btn-secondary btn-sm" onclick="carregarInventarios()">↺</button>
+  </div>
+
+  <!-- Contagem Livre -->
+  <div class="inv-card" style="border-color:var(--roxo);background:var(--lav-l);" onclick="abrirMonitor(null)">
+    <div>
+      <div class="inv-nome">🔍 Contagem Livre</div>
+      <div class="inv-meta">Bipe qualquer item do catálogo</div>
+      <span class="inv-status" style="background:var(--lav);color:var(--roxo);">Sempre disponível</span>
+    </div>
+    <div style="font-size:20px;color:var(--roxo-cl);">›</div>
+  </div>
+
+  <div id="lista-inventarios">
+    <div class="empty"><div class="empty-icon">📊</div><p>Carregando...</p></div>
+  </div>
+</div>
+
+<!-- PAGE: MONITOR (bipagem) -->
+<div class="page" id="page-monitor">
+  <button class="back-btn" onclick="voltarInventarios()">← Inventários</button>
+
+  <!-- Header do inventário -->
+  <div id="monitor-header" style="background:linear-gradient(135deg,var(--roxo),var(--roxo-esc));border-radius:14px;padding:14px 16px;margin-bottom:12px;">
+    <div style="font-size:11px;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.06em;" id="monitor-tipo-label">Contagem Livre</div>
+    <div style="font-size:16px;font-weight:800;color:#fff;margin-top:2px;" id="monitor-titulo">Bipe o local e o item</div>
+  </div>
+
+  <!-- LOCAL ATIVO -->
+  <div id="card-local-ativo" style="display:none;background:linear-gradient(135deg,#1e40af,#1d4ed8);border-radius:14px;padding:14px 16px;margin-bottom:12px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-size:10px;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.06em;">Local ativo</div>
+        <div style="font-size:24px;font-weight:900;color:#fff;margin-top:2px;letter-spacing:1px;" id="local-ativo-label">—</div>
+      </div>
+      <button onclick="fecharLocalAtual()" style="background:rgba(255,255,255,.2);color:#fff;border:1.5px solid rgba(255,255,255,.5);border-radius:10px;padding:10px 16px;font-size:12px;font-weight:800;cursor:pointer;">
+        ✅ Fechar Local
+      </button>
+    </div>
+    <!-- Itens acumulados no local -->
+    <div id="itens-local" style="margin-top:12px;"></div>
+  </div>
+
+  <!-- ALERTA ITEM DIFERENTE -->
+  <div id="alerta-item-diferente" style="display:none;background:#dc2626;border-radius:14px;padding:16px;margin-bottom:12px;text-align:center;animation:pulsar .5s ease-in-out 3;">
+    <div style="font-size:28px;">⚠️</div>
+    <div style="font-size:16px;font-weight:900;color:#fff;margin-top:4px;">ITEM DIFERENTE NO LOCAL!</div>
+    <div style="font-size:13px;color:rgba(255,255,255,.9);margin-top:4px;" id="alerta-detalhe"></div>
+    <div style="font-size:12px;color:rgba(255,255,255,.8);margin-top:8px;font-weight:700;">Destine esta peça para o local correto</div>
+    <button onclick="ocultarAlerta()" style="margin-top:12px;background:rgba(255,255,255,.2);color:#fff;border:1.5px solid rgba(255,255,255,.5);border-radius:8px;padding:8px 20px;font-size:12px;font-weight:700;cursor:pointer;">OK, entendido</button>
+  </div>
+
+  <!-- STATUS quando aguardando local -->
+  <div id="card-aguardando" class="card" style="text-align:center;padding:24px;">
+    <div style="font-size:48px;margin-bottom:8px;">📍</div>
+    <div style="font-weight:800;font-size:15px;margin-bottom:4px;">Bipe o local</div>
+    <div style="font-size:12px;color:var(--txt-s);">Aponte o coletor para o QR Code da prateleira</div>
+  </div>
+
+  <!-- Campo de bipe coletor -->
+  <div class="card" id="card-bipe-coletor">
+    <div class="card-title">📡 Coletor</div>
+    <input class="bipe-input" type="text" id="inp-bipe" inputmode="none"
+           placeholder="Aponte o coletor aqui..."
+           autocomplete="off" autocorrect="off" autocapitalize="off"
+           onkeydown="onBipeKeydown(event)"
+           oninput="onBipeInput(this.value)">
+    <div class="bipe-hint" id="bipe-hint">Bipe o QR do LOCAL primeiro</div>
+  </div>
+
+  <!-- Modo celular -->
+  <div class="card" id="card-bipe-celular" style="display:none;">
+    <div class="card-title">📱 Celular</div>
+    <div id="celular-local-wrap">
+      <label style="display:block;font-size:11px;font-weight:700;color:var(--txt-s);text-transform:uppercase;margin-bottom:5px;">Local</label>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <input type="text" id="inp-local-cel" placeholder="Ex: A1.3"
+               style="flex:1;padding:11px 14px;border:1.5px solid var(--brd);border-radius:10px;font-size:15px;font-family:inherit;outline:none;text-transform:uppercase;"
+               oninput="this.value=this.value.toUpperCase()"
+               onkeydown="if(event.key==='Enter')confirmarLocalCelular()">
+        <button class="btn btn-secondary btn-sm" onclick="abrirCamera('local')" style="white-space:nowrap;padding:11px 12px;">📷</button>
+        <button class="btn btn-secondary btn-sm" onclick="confirmarLocalCelular()" style="white-space:nowrap;">✓ OK</button>
+      </div>
+    </div>
+    <div id="celular-ean-wrap" style="opacity:.4;pointer-events:none;">
+      <label style="display:block;font-size:11px;font-weight:700;color:var(--txt-s);text-transform:uppercase;margin-bottom:5px;">EAN do Item</label>
+      <div style="display:flex;gap:8px;margin-bottom:4px;">
+        <input type="text" id="inp-ean-cel" placeholder="Digite ou escaneie o EAN"
+               style="flex:1;padding:11px 14px;border:1.5px solid var(--brd);border-radius:10px;font-size:15px;font-family:inherit;outline:none;"
+               inputmode="numeric"
+               onkeydown="if(event.key==='Enter')confirmarEanCelular()">
+        <button class="btn btn-secondary btn-sm" onclick="abrirCamera('ean')" style="white-space:nowrap;padding:11px 12px;">📷</button>
+        <button class="btn btn-secondary btn-sm" onclick="confirmarEanCelular()" style="white-space:nowrap;">✓ OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Histórico -->
+  <div style="margin-top:16px;">
+    <div style="font-size:12px;font-weight:800;color:var(--txt-s);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;display:flex;justify-content:space-between;">
+      <span>Últimos lançamentos</span>
+      <button class="btn btn-secondary btn-sm" onclick="carregarHistorico()">↺</button>
+    </div>
+    <div id="lista-historico">
+      <div style="font-size:12px;color:var(--txt-s);">Nenhum lançamento ainda</div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: MASTER -->
+<div class="page" id="page-master">
+  <div style="font-size:16px;font-weight:800;color:var(--txt);margin-bottom:12px;margin-top:4px;">⚙️ Painel Master</div>
+
+  <div class="card" style="border:2px solid var(--roxo);">
+    <div class="card-title">Criar novo inventário</div>
+    <div style="margin-bottom:12px;">
+      <label style="display:block;font-size:11px;font-weight:700;color:var(--txt-s);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Nome do inventário</label>
+      <input type="text" id="inv-nome"
+             style="width:100%;padding:11px 14px;border:1.5px solid var(--brd);border-radius:10px;font-size:14px;font-family:inherit;outline:none;"
+             placeholder="Ex: Inventário Geral Jul/2026">
+    </div>
+    <div style="margin-bottom:10px;">
+      <button onclick="baixarModelo()" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:#fff;color:var(--roxo);border:1.5px solid var(--roxo);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">
+        ⬇️ Baixar planilha modelo
+      </button>
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="display:block;font-size:11px;font-weight:700;color:var(--txt-s);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Upload da lista (.xlsx)</label>
+      <input type="file" id="inv-file" accept=".xlsx" style="padding:8px 0;font-size:13px;">
+    </div>
+    <button class="btn btn-primary" style="width:auto;padding:11px 24px;" onclick="criarInventario()">Criar Inventário</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Inventários criados</div>
+    <div id="master-lista-inv"><div class="empty"><div class="empty-icon">📊</div><p>Nenhum inventário</p></div></div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div id="bottom-nav">
+  <div class="nav-inner">
+    <button class="nav-btn active" onclick="irPara('inventarios')" id="btn-nav-inventarios">
+      <span class="nav-icon">📋</span>Inventários
+    </button>
+    <button class="nav-btn" onclick="irPara('master')" id="btn-nav-master" style="display:none;">
+      <span class="nav-icon">⚙️</span>Master
+    </button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ── SUPABASE CONFIG ────────────────────────────────────────────
+var SB_URL  = 'https://cgbothvdwkziumvbdsck.supabase.co';
+var SB_KEY  = 'sb_publishable_OUO8us3IEo88Zrz04nnGVg_WgOCckri';
+var SB_HEADERS = {
+  'Content-Type':  'application/json',
+  'apikey':        SB_KEY,
+  'Authorization': 'Bearer ' + SB_KEY,
+  'Prefer':        'return=representation'
+};
+function sbGet(path){ return fetch(SB_URL+'/rest/v1/'+path,{headers:SB_HEADERS}); }
+function sbPost(table,body){ return fetch(SB_URL+'/rest/v1/'+table,{method:'POST',headers:SB_HEADERS,body:JSON.stringify(body)}); }
+function sbPatch(table,filter,body){ return fetch(SB_URL+'/rest/v1/'+table+'?'+filter,{method:'PATCH',headers:Object.assign({},SB_HEADERS,{'Prefer':'return=minimal'}),body:JSON.stringify(body)}); }
+var EAN_LOOKUP = {"7890000012812": {"sku": "BL0012", "produto": "BLUSA FLORA", "cor": "PRETO", "tamanho": "P"}, "7890000012829": {"sku": "BL0012", "produto": "BLUSA FLORA", "cor": "PRETO", "tamanho": "M"}, "7890000012836": {"sku": "BL0012", "produto": "BLUSA FLORA", "cor": "PRETO", "tamanho": "G"}, "7890000011167": {"sku": "JA0001", "produto": "JAQUETA  STELLA", "cor": "PRETO", "tamanho": "P"}, "7890000011174": {"sku": "JA0001", "produto": "JAQUETA  STELLA", "cor": "PRETO", "tamanho": "M"}, "7890000011181": {"sku": "JA0001", "produto": "JAQUETA  STELLA", "cor": "PRETO", "tamanho": "G"}, "7890022018472": {"sku": "I00061", "produto": "REGATA HOT - INATIVO", "cor": "VERMELHO", "tamanho": "P"}, "7890022018489": {"sku": "I00056", "produto": "CALÇA ELINA - INATIVO", "cor": "AZUL", "tamanho": "34"}, "7890022018496": {"sku": "I00061", "produto": "REGATA HOT - INATIVO", "cor": "VERMELHO", "tamanho": "G"}, "7890022017260": {"sku": "BRI002", "produto": "ADESIVO - PNG", "cor": "UNICA", "tamanho": "U"}, "7890000010658": {"sku": "BRI010", "produto": "BIQUINI CORTININHA - PNG", "cor": "UNICA", "tamanho": "U"}, "7890000010665": {"sku": "BRI009", "produto": "BIQUINI MARQUINHA - PNG", "cor": "UNICA", "tamanho": "U"}, "7890000010504": {"sku": "BI0001", "produto": "BIQUÍNI KIARA", "cor": "AMARELO", "tamanho": "P"}, "7890000010511": {"sku": "BI0001", "produto": "BIQUÍNI KIARA", "cor": "AMARELO", "tamanho": "M"}, "7890000010528": {"sku": "BI0001", "produto": "BIQUÍNI KIARA", "cor": "AMARELO", "tamanho": "G"}, "7890000010542": {"sku": "BI0001", "produto": "BIQUÍNI KIARA", "cor": "PRETO", "tamanho": "P"}, "7890000010559": {"sku": "BI0001", "produto": "BIQUÍNI KIARA", "cor": "PRETO", "tamanho": "M"}, "7890000010566": {"sku": "BI0001", "produto": "BIQUÍNI KIARA", "cor": "PRETO", "tamanho": "G"}, "7890000010580": {"sku": "BI0002", "produto": "BIQUÍNI NINA", "cor": "AMARELO", "tamanho": "P"}, "7890000010597": {"sku": "BI0002", "produto": "BIQUÍNI NINA", "cor": "AMARELO", "tamanho": "M"}, "7890000010603": {"sku": "BI0002", "produto": "BIQUÍNI NINA", "cor": "AMARELO", "tamanho": "G"}, "7890000010627": {"sku": "BI0002", "produto": "BIQUÍNI NINA", "cor": "PRETO", "tamanho": "P"}, "7890000010634": {"sku": "BI0002", "produto": "BIQUÍNI NINA", "cor": "PRETO", "tamanho": "M"}, "7890000010641": {"sku": "BI0002", "produto": "BIQUÍNI NINA", "cor": "PRETO", "tamanho": "G"}, "7890022017772": {"sku": "BRI004", "produto": "BLACK CARD - PNG", "cor": "UNICA", "tamanho": "U"}, "7890022017253": {"sku": "BRI003", "produto": "BLOQUINHO - PNG", "cor": "UNICA", "tamanho": "U"}, "7890000013000": {"sku": "BL0014", "produto": "BLUSA  HELENA", "cor": "PRETO", "tamanho": "P"}, "7890000013017": {"sku": "BL0014", "produto": "BLUSA  HELENA", "cor": "PRETO", "tamanho": "M"}, "7890000013024": {"sku": "BL0014", "produto": "BLUSA  HELENA", "cor": "PRETO", "tamanho": "G"}, "7890000012454": {"sku": "BL0006", "produto": "BLUSA  NORA", "cor": "PRETO", "tamanho": "P"}, "7890000012461": {"sku": "BL0006", "produto": "BLUSA  NORA", "cor": "PRETO", "tamanho": "M"}, "7890000012478": {"sku": "BL0006", "produto": "BLUSA  NORA", "cor": "PRETO", "tamanho": "G"}, "7890000013390": {"sku": "BL0021", "produto": "BLUSA ANDY", "cor": "ONÇA", "tamanho": "P"}, "7890000013406": {"sku": "BL0021", "produto": "BLUSA ANDY", "cor": "ONÇA", "tamanho": "M"}, "7890000013413": {"sku": "BL0021", "produto": "BLUSA ANDY", "cor": "ONÇA", "tamanho": "G"}, "7890000012362": {"sku": "BL0003", "produto": "BLUSA AYLA", "cor": "PRETO", "tamanho": "P"}, "7890000012379": {"sku": "BL0003", "produto": "BLUSA AYLA", "cor": "PRETO", "tamanho": "M"}, "7890000012386": {"sku": "BL0003", "produto": "BLUSA AYLA", "cor": "PRETO", "tamanho": "G"}, "7890000012690": {"sku": "BL0009", "produto": "BLUSA CAMISA BABADOS TESTE", "cor": "PRETO", "tamanho": "P"}, "7890000012706": {"sku": "BL0009", "produto": "BLUSA CAMISA BABADOS TESTE", "cor": "PRETO", "tamanho": "M"}, "7890000012713": {"sku": "BL0009", "produto": "BLUSA CAMISA BABADOS TESTE", "cor": "PRETO", "tamanho": "G"}, "7890000013369": {"sku": "BL0020", "produto": "BLUSA CAROLINA", "cor": "PRETO", "tamanho": "P"}, "7890000013376": {"sku": "BL0020", "produto": "BLUSA CAROLINA", "cor": "PRETO", "tamanho": "M"}, "7890000013383": {"sku": "BL0020", "produto": "BLUSA CAROLINA", "cor": "PRETO", "tamanho": "G"}, "7890000012874": {"sku": "BL0013", "produto": "BLUSA CORA", "cor": "PRETO", "tamanho": "P"}, "7890000012881": {"sku": "BL0013", "produto": "BLUSA CORA", "cor": "PRETO", "tamanho": "M"}, "7890000012898": {"sku": "BL0013", "produto": "BLUSA CORA", "cor": "PRETO", "tamanho": "G"}, "7890000012720": {"sku": "BL0010", "produto": "BLUSA CORSET TESTE", "cor": "PRETO", "tamanho": "P"}, "7890000012737": {"sku": "BL0010", "produto": "BLUSA CORSET TESTE", "cor": "PRETO", "tamanho": "M"}, "7890000012744": {"sku": "BL0010", "produto": "BLUSA CORSET TESTE", "cor": "PRETO", "tamanho": "G"}, "7890000012973": {"sku": "BL0015", "produto": "BLUSA DALILA", "cor": "PRETO", "tamanho": "P"}, "7890000012980": {"sku": "BL0015", "produto": "BLUSA DALILA", "cor": "PRETO", "tamanho": "M"}, "7890000012997": {"sku": "BL0015", "produto": "BLUSA DALILA", "cor": "PRETO", "tamanho": "G"}, "7890000013277": {"sku": "BL0019", "produto": "BLUSA DANY", "cor": "PRETO", "tamanho": "P"}, "7890000013284": {"sku": "BL0019", "produto": "BLUSA DANY", "cor": "PRETO", "tamanho": "M"}, "7890000013291": {"sku": "BL0019", "produto": "BLUSA DANY", "cor": "PRETO", "tamanho": "G"}, "7890000012782": {"sku": "BL0011", "produto": "BLUSA ELOISE", "cor": "PRETO", "tamanho": "P"}, "7890000012799": {"sku": "BL0011", "produto": "BLUSA ELOISE", "cor": "PRETO", "tamanho": "M"}, "7890000012805": {"sku": "BL0011", "produto": "BLUSA ELOISE", "cor": "PRETO", "tamanho": "G"}, "7890000013079": {"sku": "BL0017", "produto": "BLUSA EVA", "cor": "ONÇA", "tamanho": "P"}, "7890000013086": {"sku": "BL0017", "produto": "BLUSA EVA", "cor": "ONÇA", "tamanho": "M"}, "7890000013093": {"sku": "BL0017", "produto": "BLUSA EVA", "cor": "ONÇA", "tamanho": "G"}, "7890000011891": {"sku": "BL0001", "produto": "BLUSA HANNA", "cor": "PRETO", "tamanho": "P"}, "7890000011907": {"sku": "BL0001", "produto": "BLUSA HANNA", "cor": "PRETO", "tamanho": "M"}, "7890000011914": {"sku": "BL0001", "produto": "BLUSA HANNA", "cor": "PRETO", "tamanho": "G"}, "7890000012515": {"sku": "BL0008", "produto": "BLUSA ISY", "cor": "PRETO", "tamanho": "P"}, "7890000012522": {"sku": "BL0008", "produto": "BLUSA ISY", "cor": "PRETO", "tamanho": "M"}, "7890000012539": {"sku": "BL0008", "produto": "BLUSA ISY", "cor": "PRETO", "tamanho": "G"}, "7890000012393": {"sku": "BL0004", "produto": "BLUSA JADE", "cor": "PRETO", "tamanho": "P"}, "7890000012409": {"sku": "BL0004", "produto": "BLUSA JADE", "cor": "PRETO", "tamanho": "M"}, "7890000012416": {"sku": "BL0004", "produto": "BLUSA JADE", "cor": "PRETO", "tamanho": "G"}, "7890000011587": {"sku": "T00077", "produto": "BLUSA LEXIE", "cor": "PRETO", "tamanho": "P"}, "7890000011594": {"sku": "T00077", "produto": "BLUSA LEXIE", "cor": "PRETO", "tamanho": "M"}, "7890000011600": {"sku": "T00077", "produto": "BLUSA LEXIE", "cor": "PRETO", "tamanho": "G"}, "7890000012300": {"sku": "BL0002", "produto": "BLUSA LOLA", "cor": "PRETO", "tamanho": "P"}, "7890000012317": {"sku": "BL0002", "produto": "BLUSA LOLA", "cor": "PRETO", "tamanho": "M"}, "7890000012324": {"sku": "BL0002", "produto": "BLUSA LOLA", "cor": "PRETO", "tamanho": "G"}, "7890000012423": {"sku": "BL0005", "produto": "BLUSA MIMI", "cor": "PRETO", "tamanho": "P"}, "7890000012430": {"sku": "BL0005", "produto": "BLUSA MIMI", "cor": "PRETO", "tamanho": "M"}, "7890000012447": {"sku": "BL0005", "produto": "BLUSA MIMI", "cor": "PRETO", "tamanho": "G"}, "7890000011792": {"sku": "T00098", "produto": "BLUSA SASHA", "cor": "OFF WHITE", "tamanho": "P"}, "7890000011808": {"sku": "T00098", "produto": "BLUSA SASHA", "cor": "OFF WHITE", "tamanho": "M"}, "7890000011815": {"sku": "T00098", "produto": "BLUSA SASHA", "cor": "OFF WHITE", "tamanho": "G"}, "7890000013246": {"sku": "BL0018", "produto": "BLUSA VIOLA", "cor": "PRETO", "tamanho": "P"}, "7890000013253": {"sku": "BL0018", "produto": "BLUSA VIOLA", "cor": "PRETO", "tamanho": "M"}, "7890000013260": {"sku": "BL0018", "produto": "BLUSA VIOLA", "cor": "PRETO", "tamanho": "G"}, "7890000013031": {"sku": "BL0016", "produto": "BLUSA ZOE", "cor": "OFF WHITE", "tamanho": "P"}, "7890000013048": {"sku": "BL0016", "produto": "BLUSA ZOE", "cor": "OFF WHITE", "tamanho": "M"}, "7890000013055": {"sku": "BL0016", "produto": "BLUSA ZOE", "cor": "OFF WHITE", "tamanho": "G"}, "7890012019540": {"sku": "B00003", "produto": "BODY AMANDA", "cor": "PRETO", "tamanho": "P"}, "7890012019557": {"sku": "B00003", "produto": "BODY AMANDA", "cor": "PRETO", "tamanho": "M"}, "7890012019564": {"sku": "B00003", "produto": "BODY AMANDA", "cor": "PRETO", "tamanho": "G"}, "7890012019571": {"sku": "B00003", "produto": "BODY AMANDA", "cor": "MARROM", "tamanho": "P"}, "7890012019588": {"sku": "B00003", "produto": "BODY AMANDA", "cor": "MARROM", "tamanho": "M"}, "7890012019595": {"sku": "B00003", "produto": "BODY AMANDA", "cor": "MARROM", "tamanho": "G"}, "7890012013227": {"sku": "B00003", "produto": "BODY AMANDA", "cor": "VERMELHO", "tamanho": "P"}, "7890012013234": {"sku": "B00003", "produto": "BODY AMANDA", "cor": "VERMELHO", "tamanho": "M"}, "7890012013241": {"sku": "B00003", "produto": "BODY AMANDA", "cor": "VERMELHO", "tamanho": "G"}, "7890022014238": {"sku": "B00003", "produto": "BODY AMANDA", "cor": "CINZA", "tamanho": "P"}, "7890022014245": {"sku": "B00003", "produto": "BODY AMANDA", "cor": "CINZA", "tamanho": "M"}, "7890022014252": {"sku": "B00003", "produto": "BODY AMANDA", "cor": "CINZA", "tamanho": "G"}, "7890000013604": {"sku": "B00009", "produto": "BODY AURA", "cor": "PRETO", "tamanho": "P"}, "7890000013611": {"sku": "B00009", "produto": "BODY AURA", "cor": "PRETO", "tamanho": "M"}, "7890000013628": {"sku": "B00009", "produto": "BODY AURA", "cor": "PRETO", "tamanho": "G"}, "7890012011049": {"sku": "I00077", "produto": "BODY BERLIM - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890012011056": {"sku": "I00077", "produto": "BODY BERLIM - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890012012046": {"sku": "I00077", "produto": "BODY BERLIM - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890012017706": {"sku": "B00013", "produto": "BODY CHARLY", "cor": "PRETO", "tamanho": "P"}, "7890012017713": {"sku": "B00013", "produto": "BODY CHARLY", "cor": "PRETO", "tamanho": "M"}, "7890012017720": {"sku": "B00013", "produto": "BODY CHARLY", "cor": "PRETO", "tamanho": "G"}, "7890012019427": {"sku": "B00013", "produto": "BODY CHARLY", "cor": "CHUMBO", "tamanho": "P"}, "7890012019434": {"sku": "B00013", "produto": "BODY CHARLY", "cor": "CHUMBO", "tamanho": "M"}, "7890012019441": {"sku": "B00013", "produto": "BODY CHARLY", "cor": "CHUMBO", "tamanho": "G"}, "7890012019922": {"sku": "B00013", "produto": "BODY CHARLY", "cor": "VERMELHO", "tamanho": "P"}, "7890012019939": {"sku": "B00013", "produto": "BODY CHARLY", "cor": "VERMELHO", "tamanho": "M"}, "7890012019946": {"sku": "B00013", "produto": "BODY CHARLY", "cor": "VERMELHO", "tamanho": "G"}, "7890012019458": {"sku": "B00013", "produto": "BODY CHARLY", "cor": "CINZA", "tamanho": "P"}, "7890012019465": {"sku": "B00013", "produto": "BODY CHARLY", "cor": "CINZA", "tamanho": "M"}, "7890012019472": {"sku": "B00013", "produto": "BODY CHARLY", "cor": "CINZA", "tamanho": "G"}, "7890022014320": {"sku": "B00010", "produto": "BODY CLEO", "cor": "CINZA", "tamanho": "P"}, "7890022014337": {"sku": "B00010", "produto": "BODY CLEO", "cor": "CINZA", "tamanho": "M"}, "7890022014344": {"sku": "B00010", "produto": "BODY CLEO", "cor": "CINZA", "tamanho": "G"}, "7890012018437": {"sku": "B00010", "produto": "BODY CLEO", "cor": "PRETO", "tamanho": "P"}, "7890012018444": {"sku": "B00010", "produto": "BODY CLEO", "cor": "PRETO", "tamanho": "M"}, "7890012018451": {"sku": "B00010", "produto": "BODY CLEO", "cor": "PRETO", "tamanho": "G"}, "7890022015341": {"sku": "I00002", "produto": "BODY JENNY - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022015358": {"sku": "I00002", "produto": "BODY JENNY - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022015365": {"sku": "I00002", "produto": "BODY JENNY - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890012012084": {"sku": "B00004", "produto": "BODY MAITÊ", "cor": "PRETO", "tamanho": "P"}, "7890012012091": {"sku": "B00004", "produto": "BODY MAITÊ", "cor": "PRETO", "tamanho": "M"}, "7890012012107": {"sku": "B00004", "produto": "BODY MAITÊ", "cor": "PRETO", "tamanho": "G"}, "7890022016706": {"sku": "B00004", "produto": "BODY MAITÊ", "cor": "MARROM", "tamanho": "P"}, "7890022016713": {"sku": "B00004", "produto": "BODY MAITÊ", "cor": "MARROM", "tamanho": "M"}, "7890022016720": {"sku": "B00004", "produto": "BODY MAITÊ", "cor": "MARROM", "tamanho": "G"}, "7890012018031": {"sku": "I00001", "produto": "BODY MARGOT - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890012018048": {"sku": "I00001", "produto": "BODY MARGOT - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890012018055": {"sku": "I00001", "produto": "BODY MARGOT - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022018605": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "PRETO", "tamanho": "PP"}, "7890012015597": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "PRETO", "tamanho": "P"}, "7890012015603": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "PRETO", "tamanho": "M"}, "7890012015610": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "PRETO", "tamanho": "G"}, "7890022018593": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "PRETO", "tamanho": "GG"}, "7890022018599": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "PRETO", "tamanho": "XGG"}, "7890022018604": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "BRANCO", "tamanho": "PP"}, "7890012017522": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "BRANCO", "tamanho": "P"}, "7890012017539": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "BRANCO", "tamanho": "M"}, "7890012017546": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "BRANCO", "tamanho": "G"}, "7890022018592": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "BRANCO", "tamanho": "GG"}, "7890022018598": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "BRANCO", "tamanho": "XGG"}, "7890022018608": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "VERMELHO", "tamanho": "PP"}, "7890012017850": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "VERMELHO", "tamanho": "P"}, "7890012017867": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "VERMELHO", "tamanho": "M"}, "7890012017874": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "VERMELHO", "tamanho": "G"}, "7890022018596": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "VERMELHO", "tamanho": "GG"}, "7890022018602": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "VERMELHO", "tamanho": "XGG"}, "7890022018606": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "MARROM", "tamanho": "PP"}, "7890022018591": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "MARROM", "tamanho": "P"}, "7890022018590": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "MARROM", "tamanho": "M"}, "7890022018589": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "MARROM", "tamanho": "G"}, "7890022018594": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "MARROM", "tamanho": "GG"}, "7890022018600": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "MARROM", "tamanho": "XGG"}, "7890022018607": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "CINZA", "tamanho": "PP"}, "7890012017881": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "CINZA", "tamanho": "P"}, "7890012017898": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "CINZA", "tamanho": "M"}, "7890012017904": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "CINZA", "tamanho": "G"}, "7890022018595": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "CINZA", "tamanho": "GG"}, "7890022018601": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "CINZA", "tamanho": "XGG"}, "7890022018609": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "AMARELO", "tamanho": "PP"}, "7890000010047": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "AMARELO", "tamanho": "P"}, "7890000010054": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "AMARELO", "tamanho": "M"}, "7890000010061": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "AMARELO", "tamanho": "G"}, "7890022018597": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "AMARELO", "tamanho": "GG"}, "7890022018603": {"sku": "B00001", "produto": "BODY MATILDA", "cor": "AMARELO", "tamanho": "XGG"}, "7890012013050": {"sku": "B00006", "produto": "BODY OLIVIA", "cor": "PRETO", "tamanho": "P"}, "7890012013067": {"sku": "B00006", "produto": "BODY OLIVIA", "cor": "PRETO", "tamanho": "M"}, "7890012013074": {"sku": "B00006", "produto": "BODY OLIVIA", "cor": "PRETO", "tamanho": "G"}, "7890022015167": {"sku": "B00006", "produto": "BODY OLIVIA", "cor": "MARROM", "tamanho": "P"}, "7890022015174": {"sku": "B00006", "produto": "BODY OLIVIA", "cor": "MARROM", "tamanho": "M"}, "7890022015181": {"sku": "B00006", "produto": "BODY OLIVIA", "cor": "MARROM", "tamanho": "G"}, "7890000013130": {"sku": "B00007", "produto": "BODY PENÉLOPE", "cor": "PRETO", "tamanho": "P"}, "7890000013147": {"sku": "B00007", "produto": "BODY PENÉLOPE", "cor": "PRETO", "tamanho": "M"}, "7890000013154": {"sku": "B00007", "produto": "BODY PENÉLOPE", "cor": "PRETO", "tamanho": "G"}, "7890012013289": {"sku": "B00014", "produto": "BODY SAKURA", "cor": "PRETO", "tamanho": "P"}, "7890012013296": {"sku": "B00014", "produto": "BODY SAKURA", "cor": "PRETO", "tamanho": "M"}, "7890012013302": {"sku": "B00014", "produto": "BODY SAKURA", "cor": "PRETO", "tamanho": "G"}, "7890012016778": {"sku": "I00075", "produto": "BODY SHARPAY - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890012016785": {"sku": "I00075", "produto": "BODY SHARPAY - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890012016792": {"sku": "I00075", "produto": "BODY SHARPAY - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890000010030": {"sku": "BRI008", "produto": "BODY SURPRESA - PNG", "cor": "UNICA", "tamanho": "U"}, "7890000013307": {"sku": "B00008", "produto": "BODY TEREZA", "cor": "PRETO", "tamanho": "P"}, "7890000013314": {"sku": "B00008", "produto": "BODY TEREZA", "cor": "PRETO", "tamanho": "M"}, "7890000013321": {"sku": "B00008", "produto": "BODY TEREZA", "cor": "PRETO", "tamanho": "G"}, "7890012019229": {"sku": "I00078", "produto": "BODY VITORIA - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890012019236": {"sku": "I00078", "produto": "BODY VITORIA - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890012019243": {"sku": "I00078", "produto": "BODY VITORIA - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890000012331": {"sku": "BRI014", "produto": "BRINDE REGATA BRA - PNG", "cor": "UNICA", "tamanho": "U"}, "7890000012546": {"sku": "C00017", "produto": "CALÇA AMARRAÇÃO TESTE", "cor": "PRETO", "tamanho": "P"}, "7890000012553": {"sku": "C00017", "produto": "CALÇA AMARRAÇÃO TESTE", "cor": "PRETO", "tamanho": "M"}, "7890000012560": {"sku": "C00017", "produto": "CALÇA AMARRAÇÃO TESTE", "cor": "PRETO", "tamanho": "G"}, "7890022018554": {"sku": "I00055", "produto": "CALÇA ANGELINA - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022018553": {"sku": "I00055", "produto": "CALÇA ANGELINA - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022018552": {"sku": "I00055", "produto": "CALÇA ANGELINA - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890000013338": {"sku": "C00018", "produto": "CALÇA ANITTA", "cor": "PRETO", "tamanho": "P"}, "7890000013345": {"sku": "C00018", "produto": "CALÇA ANITTA", "cor": "PRETO", "tamanho": "M"}, "7890000013352": {"sku": "C00018", "produto": "CALÇA ANITTA", "cor": "PRETO", "tamanho": "G"}, "7890022016416": {"sku": "I00058", "produto": "CALÇA BÁRBARA - INATIVO", "cor": "PRETO", "tamanho": "34"}, "7890022016423": {"sku": "I00058", "produto": "CALÇA BÁRBARA - INATIVO", "cor": "PRETO", "tamanho": "36"}, "7890022016430": {"sku": "I00058", "produto": "CALÇA BÁRBARA - INATIVO", "cor": "PRETO", "tamanho": "38"}, "7890022016447": {"sku": "I00058", "produto": "CALÇA BÁRBARA - INATIVO", "cor": "PRETO", "tamanho": "40"}, "7890022016454": {"sku": "I00058", "produto": "CALÇA BÁRBARA - INATIVO", "cor": "PRETO", "tamanho": "42"}, "7890022018021": {"sku": "I00007", "produto": "CALÇA CHER - INATIVO", "cor": "AZUL", "tamanho": "32"}, "7890022018038": {"sku": "I00007", "produto": "CALÇA CHER - INATIVO", "cor": "AZUL", "tamanho": "34"}, "7890022018045": {"sku": "I00007", "produto": "CALÇA CHER - INATIVO", "cor": "AZUL", "tamanho": "36"}, "7890022018052": {"sku": "I00007", "produto": "CALÇA CHER - INATIVO", "cor": "AZUL", "tamanho": "38"}, "7890022018069": {"sku": "I00007", "produto": "CALÇA CHER - INATIVO", "cor": "AZUL", "tamanho": "40"}, "7890022018076": {"sku": "I00007", "produto": "CALÇA CHER - INATIVO", "cor": "AZUL", "tamanho": "42"}, "7890022018533": {"sku": "C00011", "produto": "CALÇA DUNA", "cor": "AZUL", "tamanho": "32"}, "7890022018540": {"sku": "C00011", "produto": "CALÇA DUNA", "cor": "AZUL", "tamanho": "34"}, "7890022018557": {"sku": "C00011", "produto": "CALÇA DUNA", "cor": "AZUL", "tamanho": "36"}, "7890022018564": {"sku": "C00011", "produto": "CALÇA DUNA", "cor": "AZUL", "tamanho": "38"}, "7890022018571": {"sku": "C00011", "produto": "CALÇA DUNA", "cor": "AZUL", "tamanho": "40"}, "7890022018588": {"sku": "C00011", "produto": "CALÇA DUNA", "cor": "AZUL", "tamanho": "42"}, "7890000011365": {"sku": "C00011", "produto": "CALÇA DUNA", "cor": "PRETO", "tamanho": "32"}, "7890000011372": {"sku": "C00011", "produto": "CALÇA DUNA", "cor": "PRETO", "tamanho": "34"}, "7890000011389": {"sku": "C00011", "produto": "CALÇA DUNA", "cor": "PRETO", "tamanho": "36"}, "7890000011396": {"sku": "C00011", "produto": "CALÇA DUNA", "cor": "PRETO", "tamanho": "38"}, "7890000011402": {"sku": "C00011", "produto": "CALÇA DUNA", "cor": "PRETO", "tamanho": "40"}, "7890000011419": {"sku": "C00011", "produto": "CALÇA DUNA", "cor": "PRETO", "tamanho": "42"}, "7890022018487": {"sku": "I00056", "produto": "CALÇA ELINA - INATIVO", "cor": "AZUL", "tamanho": "32"}, "7890022018490": {"sku": "I00056", "produto": "CALÇA ELINA - INATIVO", "cor": "AZUL", "tamanho": "36"}, "7890022018491": {"sku": "I00056", "produto": "CALÇA ELINA - INATIVO", "cor": "AZUL", "tamanho": "38"}, "7890022018486": {"sku": "I00056", "produto": "CALÇA ELINA - INATIVO", "cor": "AZUL", "tamanho": "40"}, "7890022018488": {"sku": "I00056", "produto": "CALÇA ELINA - INATIVO", "cor": "AZUL", "tamanho": "42"}, "7890012015931": {"sku": "I00003", "produto": "CALÇA HOLLY - INATIVO", "cor": "PRETO", "tamanho": "32"}, "7890012015955": {"sku": "I00003", "produto": "CALÇA HOLLY - INATIVO", "cor": "PRETO", "tamanho": "34"}, "7890012015962": {"sku": "I00003", "produto": "CALÇA HOLLY - INATIVO", "cor": "PRETO", "tamanho": "36"}, "7890012015979": {"sku": "I00003", "produto": "CALÇA HOLLY - INATIVO", "cor": "PRETO", "tamanho": "38"}, "7890012015986": {"sku": "I00003", "produto": "CALÇA HOLLY - INATIVO", "cor": "PRETO", "tamanho": "40"}, "7890012015993": {"sku": "I00003", "produto": "CALÇA HOLLY - INATIVO", "cor": "PRETO", "tamanho": "42"}, "7890000011730": {"sku": "C00016", "produto": "CALÇA JULLY", "cor": "PRETO", "tamanho": "P"}, "7890000011747": {"sku": "C00016", "produto": "CALÇA JULLY", "cor": "PRETO", "tamanho": "M"}, "7890000011754": {"sku": "C00016", "produto": "CALÇA JULLY", "cor": "PRETO", "tamanho": "G"}, "7890012019793": {"sku": "C00003", "produto": "CALÇA MIRANDA", "cor": "PRETO", "tamanho": "32"}, "7890012018673": {"sku": "C00003", "produto": "CALÇA MIRANDA", "cor": "PRETO", "tamanho": "34"}, "7890012018680": {"sku": "C00003", "produto": "CALÇA MIRANDA", "cor": "PRETO", "tamanho": "36"}, "7890012018697": {"sku": "C00003", "produto": "CALÇA MIRANDA", "cor": "PRETO", "tamanho": "38"}, "7890012018703": {"sku": "C00003", "produto": "CALÇA MIRANDA", "cor": "PRETO", "tamanho": "40"}, "7890012018710": {"sku": "C00003", "produto": "CALÇA MIRANDA", "cor": "PRETO", "tamanho": "42"}, "7890012019700": {"sku": "C00003", "produto": "CALÇA MIRANDA", "cor": "ONÇA", "tamanho": "32"}, "7890012019717": {"sku": "C00003", "produto": "CALÇA MIRANDA", "cor": "ONÇA", "tamanho": "34"}, "7890012019724": {"sku": "C00003", "produto": "CALÇA MIRANDA", "cor": "ONÇA", "tamanho": "36"}, "7890012019731": {"sku": "C00003", "produto": "CALÇA MIRANDA", "cor": "ONÇA", "tamanho": "38"}, "7890012019748": {"sku": "C00003", "produto": "CALÇA MIRANDA", "cor": "ONÇA", "tamanho": "40"}, "7890012019755": {"sku": "C00003", "produto": "CALÇA MIRANDA", "cor": "ONÇA", "tamanho": "42"}, "7890022013903": {"sku": "C00005", "produto": "CALÇA NIKKI", "cor": "CHUMBO", "tamanho": "32"}, "7890022013910": {"sku": "C00005", "produto": "CALÇA NIKKI", "cor": "CHUMBO", "tamanho": "34"}, "7890022013927": {"sku": "C00005", "produto": "CALÇA NIKKI", "cor": "CHUMBO", "tamanho": "36"}, "7890022013934": {"sku": "C00005", "produto": "CALÇA NIKKI", "cor": "CHUMBO", "tamanho": "38"}, "7890022013941": {"sku": "C00005", "produto": "CALÇA NIKKI", "cor": "CHUMBO", "tamanho": "40"}, "7890022013958": {"sku": "C00005", "produto": "CALÇA NIKKI", "cor": "CHUMBO", "tamanho": "42"}, "7890012019960": {"sku": "C00005", "produto": "CALÇA NIKKI", "cor": "CINZA", "tamanho": "32"}, "7890012018727": {"sku": "C00005", "produto": "CALÇA NIKKI", "cor": "CINZA", "tamanho": "34"}, "7890012018734": {"sku": "C00005", "produto": "CALÇA NIKKI", "cor": "CINZA", "tamanho": "36"}, "7890012018741": {"sku": "C00005", "produto": "CALÇA NIKKI", "cor": "CINZA", "tamanho": "38"}, "7890012018758": {"sku": "C00005", "produto": "CALÇA NIKKI", "cor": "CINZA", "tamanho": "40"}, "7890012018765": {"sku": "C00005", "produto": "CALÇA NIKKI", "cor": "CINZA", "tamanho": "42"}, "7890012019694": {"sku": "C00005", "produto": "CALÇA NIKKI", "cor": "PRETO", "tamanho": "32"}, "7890012018246": {"sku": "C00005", "produto": "CALÇA NIKKI", "cor": "PRETO", "tamanho": "34"}, "7890012018253": {"sku": "C00005", "produto": "CALÇA NIKKI", "cor": "PRETO", "tamanho": "36"}, "7890012018260": {"sku": "C00005", "produto": "CALÇA NIKKI", "cor": "PRETO", "tamanho": "38"}, "7890012018277": {"sku": "C00005", "produto": "CALÇA NIKKI", "cor": "PRETO", "tamanho": "40"}, "7890012018284": {"sku": "C00005", "produto": "CALÇA NIKKI", "cor": "PRETO", "tamanho": "42"}, "7890022016232": {"sku": "I00005", "produto": "CALÇA ORNELLA - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022016249": {"sku": "I00005", "produto": "CALÇA ORNELLA - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022016256": {"sku": "I00005", "produto": "CALÇA ORNELLA - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022018298": {"sku": "C00014", "produto": "CALÇA SELENA", "cor": "AZUL", "tamanho": "32"}, "7890022018304": {"sku": "C00014", "produto": "CALÇA SELENA", "cor": "AZUL", "tamanho": "34"}, "7890022018311": {"sku": "C00014", "produto": "CALÇA SELENA", "cor": "AZUL", "tamanho": "36"}, "7890022018328": {"sku": "C00014", "produto": "CALÇA SELENA", "cor": "AZUL", "tamanho": "38"}, "7890022018335": {"sku": "C00014", "produto": "CALÇA SELENA", "cor": "AZUL", "tamanho": "40"}, "7890022018342": {"sku": "C00014", "produto": "CALÇA SELENA", "cor": "AZUL", "tamanho": "42"}, "7890022016171": {"sku": "I00057", "produto": "CALÇA STELLA - INATIVO", "cor": "BLACK JEANS", "tamanho": "32"}, "7890022016188": {"sku": "I00057", "produto": "CALÇA STELLA - INATIVO", "cor": "BLACK JEANS", "tamanho": "34"}, "7890022016195": {"sku": "I00057", "produto": "CALÇA STELLA - INATIVO", "cor": "BLACK JEANS", "tamanho": "36"}, "7890022016201": {"sku": "I00057", "produto": "CALÇA STELLA - INATIVO", "cor": "BLACK JEANS", "tamanho": "38"}, "7890022016218": {"sku": "I00057", "produto": "CALÇA STELLA - INATIVO", "cor": "BLACK JEANS", "tamanho": "40"}, "7890022016225": {"sku": "I00057", "produto": "CALÇA STELLA - INATIVO", "cor": "BLACK JEANS", "tamanho": "42"}, "7890012019670": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "MARROM", "tamanho": "32"}, "7890012016433": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "MARROM", "tamanho": "34"}, "7890012016440": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "MARROM", "tamanho": "36"}, "7890012016457": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "MARROM", "tamanho": "38"}, "7890012016464": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "MARROM", "tamanho": "40"}, "7890012016471": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "MARROM", "tamanho": "42"}, "7890012013401": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "BEGE", "tamanho": "32"}, "7890012013418": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "BEGE", "tamanho": "34"}, "7890012013425": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "BEGE", "tamanho": "36"}, "7890012013432": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "BEGE", "tamanho": "38"}, "7890012013449": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "BEGE", "tamanho": "40"}, "7890012013456": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "BEGE", "tamanho": "42"}, "7890012013555": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "PRETO", "tamanho": "32"}, "7890012013562": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "PRETO", "tamanho": "34"}, "7890012013364": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "PRETO", "tamanho": "36"}, "7890012013371": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "PRETO", "tamanho": "38"}, "7890012013388": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "PRETO", "tamanho": "40"}, "7890012013395": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "PRETO", "tamanho": "42"}, "7890012019663": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "VERMELHO", "tamanho": "32"}, "7890012017201": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "VERMELHO", "tamanho": "34"}, "7890012017218": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "VERMELHO", "tamanho": "36"}, "7890012017225": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "VERMELHO", "tamanho": "38"}, "7890012017232": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "VERMELHO", "tamanho": "40"}, "7890012017249": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "VERMELHO", "tamanho": "42"}, "7890022017062": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "BLACK JEANS", "tamanho": "32"}, "7890022017079": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "BLACK JEANS", "tamanho": "34"}, "7890022017086": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "BLACK JEANS", "tamanho": "36"}, "7890022017093": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "BLACK JEANS", "tamanho": "38"}, "7890022017109": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "BLACK JEANS", "tamanho": "40"}, "7890022017123": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "BLACK JEANS", "tamanho": "42"}, "7890000011006": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "CINZA", "tamanho": "32"}, "7890000011013": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "CINZA", "tamanho": "34"}, "7890000011020": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "CINZA", "tamanho": "36"}, "7890000011037": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "CINZA", "tamanho": "38"}, "7890000011044": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "CINZA", "tamanho": "40"}, "7890000011051": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "CINZA", "tamanho": "42"}, "7890022018083": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "OFF WHITE", "tamanho": "32"}, "7890022018090": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "OFF WHITE", "tamanho": "34"}, "7890022018106": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "OFF WHITE", "tamanho": "36"}, "7890022018113": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "OFF WHITE", "tamanho": "38"}, "7890022018120": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "OFF WHITE", "tamanho": "40"}, "7890022018137": {"sku": "C00002", "produto": "CALÇA TEDDY", "cor": "OFF WHITE", "tamanho": "42"}, "7890022013842": {"sku": "I00080", "produto": "CALÇA TORONTO - INATIVO", "cor": "PRETO", "tamanho": "32"}, "7890022013859": {"sku": "I00080", "produto": "CALÇA TORONTO - INATIVO", "cor": "PRETO", "tamanho": "34"}, "7890022013866": {"sku": "I00080", "produto": "CALÇA TORONTO - INATIVO", "cor": "PRETO", "tamanho": "36"}, "7890022013873": {"sku": "I00080", "produto": "CALÇA TORONTO - INATIVO", "cor": "PRETO", "tamanho": "38"}, "7890022013880": {"sku": "I00080", "produto": "CALÇA TORONTO - INATIVO", "cor": "PRETO", "tamanho": "40"}, "7890022013897": {"sku": "I00080", "produto": "CALÇA TORONTO - INATIVO", "cor": "PRETO", "tamanho": "42"}, "7890012019687": {"sku": "I00080", "produto": "CALÇA TORONTO - INATIVO", "cor": "CINZA", "tamanho": "32"}, "7890012012541": {"sku": "I00080", "produto": "CALÇA TORONTO - INATIVO", "cor": "CINZA", "tamanho": "34"}, "7890012012558": {"sku": "I00080", "produto": "CALÇA TORONTO - INATIVO", "cor": "CINZA", "tamanho": "36"}, "7890012012565": {"sku": "I00080", "produto": "CALÇA TORONTO - INATIVO", "cor": "CINZA", "tamanho": "38"}, "7890012012572": {"sku": "I00080", "produto": "CALÇA TORONTO - INATIVO", "cor": "CINZA", "tamanho": "40"}, "7890012016747": {"sku": "I00080", "produto": "CALÇA TORONTO - INATIVO", "cor": "CINZA", "tamanho": "42"}, "7890022015730": {"sku": "I00080", "produto": "CALÇA TORONTO - INATIVO", "cor": "BEGE", "tamanho": "32"}, "7890022015747": {"sku": "I00080", "produto": "CALÇA TORONTO - INATIVO", "cor": "BEGE", "tamanho": "34"}, "7890022015754": {"sku": "I00080", "produto": "CALÇA TORONTO - INATIVO", "cor": "BEGE", "tamanho": "36"}, "7890022015761": {"sku": "I00080", "produto": "CALÇA TORONTO - INATIVO", "cor": "BEGE", "tamanho": "38"}, "7890022015778": {"sku": "I00080", "produto": "CALÇA TORONTO - INATIVO", "cor": "BEGE", "tamanho": "40"}, "7890022015785": {"sku": "I00080", "produto": "CALÇA TORONTO - INATIVO", "cor": "BEGE", "tamanho": "42"}, "7890000011204": {"sku": "C00015", "produto": "CALÇA TRICOT ANAHÍ", "cor": "PRETO", "tamanho": "P"}, "7890000011211": {"sku": "C00015", "produto": "CALÇA TRICOT ANAHÍ", "cor": "PRETO", "tamanho": "M"}, "7890000011228": {"sku": "C00015", "produto": "CALÇA TRICOT ANAHÍ", "cor": "PRETO", "tamanho": "G"}, "7890000013512": {"sku": "C00019", "produto": "CALÇA VÊNUS", "cor": "PRETO", "tamanho": "P"}, "7890000013529": {"sku": "C00019", "produto": "CALÇA VÊNUS", "cor": "PRETO", "tamanho": "M"}, "7890000013536": {"sku": "C00019", "produto": "CALÇA VÊNUS", "cor": "PRETO", "tamanho": "G"}, "7890022017697": {"sku": "I00030", "produto": "CAMISA MALIBU - INATIVO", "cor": "AZUL", "tamanho": "P"}, "7890022017703": {"sku": "I00030", "produto": "CAMISA MALIBU - INATIVO", "cor": "AZUL", "tamanho": "M"}, "7890022017710": {"sku": "I00030", "produto": "CAMISA MALIBU - INATIVO", "cor": "AZUL", "tamanho": "G"}, "7890022016089": {"sku": "I00026", "produto": "CAMISA ORNELLA - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022016096": {"sku": "I00026", "produto": "CAMISA ORNELLA - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022016102": {"sku": "I00026", "produto": "CAMISA ORNELLA - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890000010726": {"sku": "CA0002", "produto": "CASACO JESSI", "cor": "AREIA", "tamanho": "P"}, "7890000010733": {"sku": "CA0002", "produto": "CASACO JESSI", "cor": "AREIA", "tamanho": "M"}, "7890000010740": {"sku": "CA0002", "produto": "CASACO JESSI", "cor": "AREIA", "tamanho": "G"}, "7890000010764": {"sku": "CA0002", "produto": "CASACO JESSI", "cor": "PRETO", "tamanho": "P"}, "7890000010771": {"sku": "CA0002", "produto": "CASACO JESSI", "cor": "PRETO", "tamanho": "M"}, "7890000010788": {"sku": "CA0002", "produto": "CASACO JESSI", "cor": "PRETO", "tamanho": "G"}, "7890000011488": {"sku": "CA0001", "produto": "CASACO NAOMI", "cor": "PRETO", "tamanho": "P"}, "7890000011495": {"sku": "CA0001", "produto": "CASACO NAOMI", "cor": "PRETO", "tamanho": "M"}, "7890000011501": {"sku": "CA0001", "produto": "CASACO NAOMI", "cor": "PRETO", "tamanho": "G"}, "7890000011518": {"sku": "CA0001", "produto": "CASACO NAOMI", "cor": "VERMELHO", "tamanho": "P"}, "7890000011525": {"sku": "CA0001", "produto": "CASACO NAOMI", "cor": "VERMELHO", "tamanho": "M"}, "7890000011532": {"sku": "CA0001", "produto": "CASACO NAOMI", "cor": "VERMELHO", "tamanho": "G"}, "7890000011822": {"sku": "CA0001", "produto": "CASACO NAOMI", "cor": "AZUL", "tamanho": "P"}, "7890000011839": {"sku": "CA0001", "produto": "CASACO NAOMI", "cor": "AZUL", "tamanho": "M"}, "7890000011846": {"sku": "CA0001", "produto": "CASACO NAOMI", "cor": "AZUL", "tamanho": "G"}, "7890000013451": {"sku": "CA0003", "produto": "CASACO SIENA", "cor": "AMARELO", "tamanho": "P"}, "7890000013468": {"sku": "CA0003", "produto": "CASACO SIENA", "cor": "AMARELO", "tamanho": "M"}, "7890000013475": {"sku": "CA0003", "produto": "CASACO SIENA", "cor": "AMARELO", "tamanho": "G"}, "7890022017840": {"sku": "BRI001", "produto": "CHAVEIRO - PNG", "cor": "UNICA", "tamanho": "U"}, "7890000011853": {"sku": "BRI012", "produto": "COPO STAR - PNG", "cor": "UNICA", "tamanho": "U"}, "7890022018014": {"sku": "BRI005", "produto": "ECOBAG - PNG", "cor": "UNICA", "tamanho": "U"}, "7890000012485": {"sku": "ZZZZZZZZZZZZZZZZZ7", "produto": "EXCLUIR PRODUTO", "cor": "PRETO", "tamanho": "P"}, "7890000012492": {"sku": "ZZZZZZZZZZZZZZZZZ7", "produto": "EXCLUIR PRODUTO", "cor": "PRETO", "tamanho": "M"}, "7890000012508": {"sku": "ZZZZZZZZZZZZZZZZZ7", "produto": "EXCLUIR PRODUTO", "cor": "PRETO", "tamanho": "G"}, "7890000013215": {"sku": "ZZZZZZ15", "produto": "EXCLUIR PRODUTO", "cor": "PRETO", "tamanho": "P"}, "7890000013222": {"sku": "ZZZZZZ15", "produto": "EXCLUIR PRODUTO", "cor": "PRETO", "tamanho": "M"}, "7890000013239": {"sku": "ZZZZZZ15", "produto": "EXCLUIR PRODUTO", "cor": "PRETO", "tamanho": "G"}, "7890000011068": {"sku": "BRI011", "produto": "INFLU CARD - PNG", "cor": "UNICA", "tamanho": "U"}, "7890000011860": {"sku": "JA0002", "produto": "JAQUETA BRA", "cor": "PRETO", "tamanho": "P"}, "7890000011877": {"sku": "JA0002", "produto": "JAQUETA BRA", "cor": "PRETO", "tamanho": "M"}, "7890000011884": {"sku": "JA0002", "produto": "JAQUETA BRA", "cor": "PRETO", "tamanho": "G"}, "7890012013203": {"sku": "I00060", "produto": "JAQUETA MIRANDA - INATIVO", "cor": "ONÇA", "tamanho": "P"}, "7890012013210": {"sku": "I00060", "produto": "JAQUETA MIRANDA - INATIVO", "cor": "ONÇA", "tamanho": "M"}, "7890012013517": {"sku": "I00060", "produto": "JAQUETA MIRANDA - INATIVO", "cor": "ONÇA", "tamanho": "G"}, "7890022018007": {"sku": "BRI006", "produto": "LOOK SURPRESA - PNG", "cor": "UNICA", "tamanho": "U"}, "7890012012695": {"sku": "I00076", "produto": "MACACÃO DESIRÉ - INATIVO", "cor": "PRETO", "tamanho": "PP"}, "7890012012701": {"sku": "I00076", "produto": "MACACÃO DESIRÉ - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890012012718": {"sku": "I00076", "produto": "MACACÃO DESIRÉ - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890012012725": {"sku": "I00076", "produto": "MACACÃO DESIRÉ - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022016324": {"sku": "I00013", "produto": "MACAQUITO SOLÉ - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022016331": {"sku": "I00013", "produto": "MACAQUITO SOLÉ - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022016348": {"sku": "I00013", "produto": "MACAQUITO SOLÉ - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022017963": {"sku": "BRI013", "produto": "OCULOS - PNG", "cor": "UNICA", "tamanho": "U"}, "7890000013420": {"sku": "R00007", "produto": "REGATA ANTONELLA", "cor": "ONÇA", "tamanho": "P"}, "7890000013437": {"sku": "R00007", "produto": "REGATA ANTONELLA", "cor": "ONÇA", "tamanho": "M"}, "7890000013444": {"sku": "R00007", "produto": "REGATA ANTONELLA", "cor": "ONÇA", "tamanho": "G"}, "7890000011921": {"sku": "R00003", "produto": "REGATA BR", "cor": "PRETO", "tamanho": "P"}, "7890000011938": {"sku": "R00003", "produto": "REGATA BR", "cor": "PRETO", "tamanho": "M"}, "7890000011945": {"sku": "R00003", "produto": "REGATA BR", "cor": "PRETO", "tamanho": "G"}, "7890022018502": {"sku": "R00001", "produto": "REGATA BRA", "cor": "PRETO", "tamanho": "P"}, "7890022018519": {"sku": "R00001", "produto": "REGATA BRA", "cor": "PRETO", "tamanho": "M"}, "7890022018526": {"sku": "R00001", "produto": "REGATA BRA", "cor": "PRETO", "tamanho": "G"}, "7890022018380": {"sku": "R00001", "produto": "REGATA BRA", "cor": "AMARELO", "tamanho": "P"}, "7890022018397": {"sku": "R00001", "produto": "REGATA BRA", "cor": "AMARELO", "tamanho": "M"}, "7890022018403": {"sku": "R00001", "produto": "REGATA BRA", "cor": "AMARELO", "tamanho": "G"}, "7890000012119": {"sku": "R00005", "produto": "REGATA BRA ADIDAS - TESTE", "cor": "PRETO", "tamanho": "P"}, "7890000012126": {"sku": "R00005", "produto": "REGATA BRA ADIDAS - TESTE", "cor": "PRETO", "tamanho": "M"}, "7890000012133": {"sku": "R00005", "produto": "REGATA BRA ADIDAS - TESTE", "cor": "PRETO", "tamanho": "G"}, "7890000012089": {"sku": "R00004", "produto": "REGATA BRA RECORTE - TESTE", "cor": "PRETO", "tamanho": "P"}, "7890000012096": {"sku": "R00004", "produto": "REGATA BRA RECORTE - TESTE", "cor": "PRETO", "tamanho": "M"}, "7890000012102": {"sku": "R00004", "produto": "REGATA BRA RECORTE - TESTE", "cor": "PRETO", "tamanho": "G"}, "7890000013574": {"sku": "R00009", "produto": "REGATA DUO", "cor": "PRETO", "tamanho": "P"}, "7890000013581": {"sku": "R00009", "produto": "REGATA DUO", "cor": "PRETO", "tamanho": "M"}, "7890000013598": {"sku": "R00009", "produto": "REGATA DUO", "cor": "PRETO", "tamanho": "G"}, "7890000012843": {"sku": "R00006", "produto": "REGATA JUSTA TESTE", "cor": "PRETO", "tamanho": "P"}, "7890000012850": {"sku": "R00006", "produto": "REGATA JUSTA TESTE", "cor": "PRETO", "tamanho": "M"}, "7890000012867": {"sku": "R00006", "produto": "REGATA JUSTA TESTE", "cor": "PRETO", "tamanho": "G"}, "7890000011761": {"sku": "R00002", "produto": "REGATA LUNA", "cor": "PRETO", "tamanho": "P"}, "7890000011778": {"sku": "R00002", "produto": "REGATA LUNA", "cor": "PRETO", "tamanho": "M"}, "7890000011785": {"sku": "R00002", "produto": "REGATA LUNA", "cor": "PRETO", "tamanho": "G"}, "7890000009935": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "ARIES", "tamanho": "P"}, "7890000009928": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "ARIES", "tamanho": "M"}, "7890000009911": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "ARIES", "tamanho": "G"}, "7890000009966": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "GEMEOS", "tamanho": "P"}, "7890000009959": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "GEMEOS", "tamanho": "M"}, "7890000009942": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "GEMEOS", "tamanho": "G"}, "7890000009812": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "LIBRA", "tamanho": "P"}, "7890000009805": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "LIBRA", "tamanho": "M"}, "7890000009799": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "LIBRA", "tamanho": "G"}, "7890000009751": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "SAGITARIO", "tamanho": "P"}, "7890000009744": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "SAGITARIO", "tamanho": "M"}, "7890000009737": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "SAGITARIO", "tamanho": "G"}, "7890000009874": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "LEAO", "tamanho": "P"}, "7890000009867": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "LEAO", "tamanho": "M"}, "7890000009850": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "LEAO", "tamanho": "G"}, "7890000009720": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "CAPRICORNIO", "tamanho": "P"}, "7890000009713": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "CAPRICORNIO", "tamanho": "M"}, "7890000009706": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "CAPRICORNIO", "tamanho": "G"}, "7890000009843": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "VIRGEM", "tamanho": "P"}, "7890000009836": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "VIRGEM", "tamanho": "M"}, "7890000009829": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "VIRGEM", "tamanho": "G"}, "7890000009782": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "ESCORPIAO", "tamanho": "P"}, "7890000009775": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "ESCORPIAO", "tamanho": "M"}, "7890000009768": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "ESCORPIAO", "tamanho": "G"}, "7890000009669": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "PEIXES", "tamanho": "P"}, "7890000009652": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "PEIXES", "tamanho": "M"}, "7890000009645": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "PEIXES", "tamanho": "G"}, "7890000009690": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "AQUARIO", "tamanho": "P"}, "7890000009683": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "AQUARIO", "tamanho": "M"}, "7890000009676": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "AQUARIO", "tamanho": "G"}, "7890000009997": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "TOURO", "tamanho": "P"}, "7890000009980": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "TOURO", "tamanho": "M"}, "7890000009973": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "TOURO", "tamanho": "G"}, "7890000009904": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "CANCER", "tamanho": "P"}, "7890000009898": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "CANCER", "tamanho": "M"}, "7890000009881": {"sku": "R00010", "produto": "REGATA ZODÍACO", "cor": "CANCER", "tamanho": "G"}, "7890000013482": {"sku": "S00016", "produto": "SAIA ALEX", "cor": "ONÇA", "tamanho": "P"}, "7890000013499": {"sku": "S00016", "produto": "SAIA ALEX", "cor": "ONÇA", "tamanho": "M"}, "7890000013505": {"sku": "S00016", "produto": "SAIA ALEX", "cor": "ONÇA", "tamanho": "G"}, "7890022015525": {"sku": "I00081", "produto": "SAIA ARIEL - INATIVO", "cor": "OFF WHITE", "tamanho": "P"}, "7890022015532": {"sku": "I00081", "produto": "SAIA ARIEL - INATIVO", "cor": "OFF WHITE", "tamanho": "M"}, "7890022015549": {"sku": "I00081", "produto": "SAIA ARIEL - INATIVO", "cor": "OFF WHITE", "tamanho": "G"}, "7890022017338": {"sku": "I00081", "produto": "SAIA ARIEL - INATIVO", "cor": "AZUL", "tamanho": "P"}, "7890022017345": {"sku": "I00081", "produto": "SAIA ARIEL - INATIVO", "cor": "AZUL", "tamanho": "M"}, "7890022017352": {"sku": "I00081", "produto": "SAIA ARIEL - INATIVO", "cor": "AZUL", "tamanho": "G"}, "7890022016911": {"sku": "I00081", "produto": "SAIA ARIEL - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022016928": {"sku": "I00081", "produto": "SAIA ARIEL - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022016935": {"sku": "I00081", "produto": "SAIA ARIEL - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890000012270": {"sku": "S00009", "produto": "SAIA BABADOS MARI", "cor": "PRETO", "tamanho": "P"}, "7890000012287": {"sku": "S00009", "produto": "SAIA BABADOS MARI", "cor": "PRETO", "tamanho": "M"}, "7890000012294": {"sku": "S00009", "produto": "SAIA BABADOS MARI", "cor": "PRETO", "tamanho": "G"}, "7890000013109": {"sku": "S00014", "produto": "SAIA CAPRI", "cor": "PRETO", "tamanho": "P"}, "7890000013116": {"sku": "S00014", "produto": "SAIA CAPRI", "cor": "PRETO", "tamanho": "M"}, "7890000013123": {"sku": "S00014", "produto": "SAIA CAPRI", "cor": "PRETO", "tamanho": "G"}, "7890000012638": {"sku": "S00011", "produto": "SAIA ILHÓS TESTE", "cor": "PRETO", "tamanho": "P"}, "7890000012645": {"sku": "S00011", "produto": "SAIA ILHÓS TESTE", "cor": "PRETO", "tamanho": "M"}, "7890000012652": {"sku": "S00011", "produto": "SAIA ILHÓS TESTE", "cor": "PRETO", "tamanho": "G"}, "7890022015587": {"sku": "S00005", "produto": "SAIA LIA", "cor": "PRETO", "tamanho": "P"}, "7890022015594": {"sku": "S00005", "produto": "SAIA LIA", "cor": "PRETO", "tamanho": "M"}, "7890022015600": {"sku": "S00005", "produto": "SAIA LIA", "cor": "PRETO", "tamanho": "G"}, "7890022017246": {"sku": "S00005", "produto": "SAIA LIA", "cor": "CINZA", "tamanho": "P"}, "7890022017222": {"sku": "S00005", "produto": "SAIA LIA", "cor": "CINZA", "tamanho": "M"}, "7890022017239": {"sku": "S00005", "produto": "SAIA LIA", "cor": "CINZA", "tamanho": "G"}, "7890022018410": {"sku": "S00005", "produto": "SAIA LIA", "cor": "OFF WHITE", "tamanho": "P"}, "7890022018427": {"sku": "S00005", "produto": "SAIA LIA", "cor": "OFF WHITE", "tamanho": "M"}, "7890022018434": {"sku": "S00005", "produto": "SAIA LIA", "cor": "OFF WHITE", "tamanho": "G"}, "7890022015280": {"sku": "I00083", "produto": "SAIA MADSON - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022015297": {"sku": "I00083", "produto": "SAIA MADSON - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022015303": {"sku": "I00083", "produto": "SAIA MADSON - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890000012966": {"sku": "S00013", "produto": "SAIA MILA", "cor": "ONÇA", "tamanho": "32"}, "7890000012911": {"sku": "S00013", "produto": "SAIA MILA", "cor": "ONÇA", "tamanho": "34"}, "7890000012928": {"sku": "S00013", "produto": "SAIA MILA", "cor": "ONÇA", "tamanho": "36"}, "7890000012935": {"sku": "S00013", "produto": "SAIA MILA", "cor": "ONÇA", "tamanho": "38"}, "7890000012942": {"sku": "S00013", "produto": "SAIA MILA", "cor": "ONÇA", "tamanho": "40"}, "7890000012959": {"sku": "S00013", "produto": "SAIA MILA", "cor": "ONÇA", "tamanho": "42"}, "7890022016027": {"sku": "I00082", "produto": "SAIA MILLI - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022016034": {"sku": "I00082", "produto": "SAIA MILLI - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022016041": {"sku": "I00082", "produto": "SAIA MILLI - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890000012751": {"sku": "S00012", "produto": "SAIA OLÍMPIA", "cor": "PRETO", "tamanho": "P"}, "7890000012768": {"sku": "S00012", "produto": "SAIA OLÍMPIA", "cor": "PRETO", "tamanho": "M"}, "7890000012775": {"sku": "S00012", "produto": "SAIA OLÍMPIA", "cor": "PRETO", "tamanho": "G"}, "7890012010073": {"sku": "I00104", "produto": "SAIA SOFIA", "cor": "PRETO", "tamanho": "P"}, "7890012010080": {"sku": "I00104", "produto": "SAIA SOFIA", "cor": "PRETO", "tamanho": "M"}, "7890012010097": {"sku": "I00104", "produto": "SAIA SOFIA", "cor": "PRETO", "tamanho": "G"}, "7890022016386": {"sku": "I00104", "produto": "SAIA SOFIA", "cor": "CINZA", "tamanho": "P"}, "7890022016393": {"sku": "I00104", "produto": "SAIA SOFIA", "cor": "CINZA", "tamanho": "M"}, "7890022016409": {"sku": "I00104", "produto": "SAIA SOFIA", "cor": "CINZA", "tamanho": "G"}, "7890022014290": {"sku": "I00104", "produto": "SAIA SOFIA", "cor": "MARROM", "tamanho": "P"}, "7890022014306": {"sku": "I00104", "produto": "SAIA SOFIA", "cor": "MARROM", "tamanho": "M"}, "7890022014313": {"sku": "I00104", "produto": "SAIA SOFIA", "cor": "MARROM", "tamanho": "G"}, "7890000012607": {"sku": "S00010", "produto": "SAIA TULUM TESTE", "cor": "PRETO", "tamanho": "P"}, "7890000012614": {"sku": "S00010", "produto": "SAIA TULUM TESTE", "cor": "PRETO", "tamanho": "M"}, "7890000012621": {"sku": "S00010", "produto": "SAIA TULUM TESTE", "cor": "PRETO", "tamanho": "G"}, "7890000012577": {"sku": "SH0003", "produto": "SHORT ALFAIATARIA TESTE", "cor": "PRETO", "tamanho": "P"}, "7890000012584": {"sku": "SH0003", "produto": "SHORT ALFAIATARIA TESTE", "cor": "PRETO", "tamanho": "M"}, "7890000012591": {"sku": "SH0003", "produto": "SHORT ALFAIATARIA TESTE", "cor": "PRETO", "tamanho": "G"}, "7890000011969": {"sku": "SH0001", "produto": "SHORT FITNESS - TESTE", "cor": "MARROM", "tamanho": "P"}, "7890000012034\t\tNÃO": {"sku": "SH0001", "produto": "SHORT FITNESS - TESTE", "cor": "MARROM", "tamanho": "M"}, "7890000012041": {"sku": "SH0001", "produto": "SHORT FITNESS - TESTE", "cor": "MARROM", "tamanho": "G"}, "7890000012058": {"sku": "SH0001", "produto": "SHORT FITNESS - TESTE", "cor": "VERMELHO", "tamanho": "P"}, "7890000012065": {"sku": "SH0001", "produto": "SHORT FITNESS - TESTE", "cor": "VERMELHO", "tamanho": "M"}, "7890000012072": {"sku": "SH0001", "produto": "SHORT FITNESS - TESTE", "cor": "VERMELHO", "tamanho": "G"}, "7890000012201": {"sku": "SH0002", "produto": "SHORT FITNESS RVB - TESTE", "cor": "MARROM", "tamanho": "P"}, "7890000012218": {"sku": "SH0002", "produto": "SHORT FITNESS RVB - TESTE", "cor": "MARROM", "tamanho": "M"}, "7890000012225": {"sku": "SH0002", "produto": "SHORT FITNESS RVB - TESTE", "cor": "MARROM", "tamanho": "G"}, "7890000012232": {"sku": "SH0002", "produto": "SHORT FITNESS RVB - TESTE", "cor": "VERMELHO", "tamanho": "P"}, "7822499000001": {"sku": "SH0002", "produto": "SHORT FITNESS RVB - TESTE", "cor": "VERMELHO", "tamanho": "M"}, "7890000012256": {"sku": "SH0002", "produto": "SHORT FITNESS RVB - TESTE", "cor": "VERMELHO", "tamanho": "G"}, "7890022016058": {"sku": "I00014", "produto": "SHORT GIULIA - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022016065": {"sku": "I00014", "produto": "SHORT GIULIA - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022016072": {"sku": "I00014", "produto": "SHORT GIULIA - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022017000": {"sku": "I00015", "produto": "SHORT SAVANA - INATIVO", "cor": "VERDE", "tamanho": "P"}, "7890022017017": {"sku": "I00015", "produto": "SHORT SAVANA - INATIVO", "cor": "VERDE", "tamanho": "M"}, "7890022017024": {"sku": "I00015", "produto": "SHORT SAVANA - INATIVO", "cor": "VERDE", "tamanho": "G"}, "7890022015310": {"sku": "I00029", "produto": "TOP ALEXA - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022015327": {"sku": "I00029", "produto": "TOP ALEXA - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022015334": {"sku": "I00029", "produto": "TOP ALEXA - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022015402": {"sku": "I00029", "produto": "TOP ALEXA - INATIVO", "cor": "VERMELHO", "tamanho": "P"}, "7890022015419": {"sku": "I00029", "produto": "TOP ALEXA - INATIVO", "cor": "VERMELHO", "tamanho": "M"}, "7890022015426": {"sku": "I00029", "produto": "TOP ALEXA - INATIVO", "cor": "VERMELHO", "tamanho": "G"}, "7890022015433": {"sku": "I00029", "produto": "TOP ALEXA - INATIVO", "cor": "MARROM", "tamanho": "P"}, "7890022015440": {"sku": "I00029", "produto": "TOP ALEXA - INATIVO", "cor": "MARROM", "tamanho": "M"}, "7890022015457": {"sku": "I00029", "produto": "TOP ALEXA - INATIVO", "cor": "MARROM", "tamanho": "G"}, "7890000010269": {"sku": "T00063", "produto": "TOP ALISON", "cor": "PRETO", "tamanho": "P"}, "7890000010276": {"sku": "T00063", "produto": "TOP ALISON", "cor": "PRETO", "tamanho": "M"}, "7890000010283": {"sku": "T00063", "produto": "TOP ALISON", "cor": "PRETO", "tamanho": "G"}, "7890000010306": {"sku": "T00063", "produto": "TOP ALISON", "cor": "BRANCO", "tamanho": "P"}, "7890000010313": {"sku": "T00063", "produto": "TOP ALISON", "cor": "BRANCO", "tamanho": "M"}, "7890000010320": {"sku": "T00063", "produto": "TOP ALISON", "cor": "BRANCO", "tamanho": "G"}, "7890000011280": {"sku": "T00063", "produto": "TOP ALISON", "cor": "MARROM", "tamanho": "P"}, "7890000011297": {"sku": "T00063", "produto": "TOP ALISON", "cor": "MARROM", "tamanho": "M"}, "7890000011303": {"sku": "T00063", "produto": "TOP ALISON", "cor": "MARROM", "tamanho": "G"}, "7890000011082": {"sku": "T00090", "produto": "TOP ALISSA", "cor": "PRETO", "tamanho": "P"}, "7890000011099": {"sku": "T00090", "produto": "TOP ALISSA", "cor": "PRETO", "tamanho": "M"}, "7890000011105": {"sku": "T00090", "produto": "TOP ALISSA", "cor": "PRETO", "tamanho": "G"}, "7890000010429": {"sku": "I00095", "produto": "TOP AMY", "cor": "PRETO", "tamanho": "P"}, "7890000010436": {"sku": "I00095", "produto": "TOP AMY", "cor": "PRETO", "tamanho": "M"}, "7890000010443": {"sku": "I00095", "produto": "TOP AMY", "cor": "PRETO", "tamanho": "G"}, "7890000010221": {"sku": "I00097", "produto": "TOP AMÉLIA - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890000010238": {"sku": "I00097", "produto": "TOP AMÉLIA - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890000010245": {"sku": "I00097", "produto": "TOP AMÉLIA - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022013699": {"sku": "I00089", "produto": "TOP ANNA", "cor": "PRETO", "tamanho": "P"}, "7890022013705": {"sku": "I00089", "produto": "TOP ANNA", "cor": "PRETO", "tamanho": "M"}, "7890022013712": {"sku": "I00089", "produto": "TOP ANNA", "cor": "PRETO", "tamanho": "G"}, "7890022016584": {"sku": "I00089", "produto": "TOP ANNA", "cor": "VERMELHO", "tamanho": "P"}, "7890022016591": {"sku": "I00089", "produto": "TOP ANNA", "cor": "VERMELHO", "tamanho": "M"}, "7890022016607": {"sku": "I00089", "produto": "TOP ANNA", "cor": "VERMELHO", "tamanho": "G"}, "7890022015822": {"sku": "I00089", "produto": "TOP ANNA", "cor": "MARROM", "tamanho": "P"}, "7890022015839": {"sku": "I00089", "produto": "TOP ANNA", "cor": "MARROM", "tamanho": "M"}, "7890022015846": {"sku": "I00089", "produto": "TOP ANNA", "cor": "MARROM", "tamanho": "G"}, "7890022017277": {"sku": "I00089", "produto": "TOP ANNA", "cor": "CINZA", "tamanho": "P"}, "7890022017284": {"sku": "I00089", "produto": "TOP ANNA", "cor": "CINZA", "tamanho": "M"}, "7890022017291": {"sku": "I00089", "produto": "TOP ANNA", "cor": "CINZA", "tamanho": "G"}, "7890000009638": {"sku": "T00101", "produto": "TOP ARES", "cor": "PRETO", "tamanho": "P"}, "7890000009621": {"sku": "T00101", "produto": "TOP ARES", "cor": "PRETO", "tamanho": "M"}, "7890000009614": {"sku": "T00101", "produto": "TOP ARES", "cor": "PRETO", "tamanho": "G"}, "7890022015495": {"sku": "I00108", "produto": "TOP ARIEL - INATIVO", "cor": "OFF WHITE", "tamanho": "P"}, "7890022015501": {"sku": "I00108", "produto": "TOP ARIEL - INATIVO", "cor": "OFF WHITE", "tamanho": "M"}, "7890022015518": {"sku": "I00108", "produto": "TOP ARIEL - INATIVO", "cor": "OFF WHITE", "tamanho": "G"}, "7890022017307": {"sku": "I00108", "produto": "TOP ARIEL - INATIVO", "cor": "AZUL", "tamanho": "P"}, "7890022017314": {"sku": "I00108", "produto": "TOP ARIEL - INATIVO", "cor": "AZUL", "tamanho": "M"}, "7890022017321": {"sku": "I00108", "produto": "TOP ARIEL - INATIVO", "cor": "AZUL", "tamanho": "G"}, "7890022016881": {"sku": "I00108", "produto": "TOP ARIEL - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022016898": {"sku": "I00108", "produto": "TOP ARIEL - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022016904": {"sku": "I00108", "produto": "TOP ARIEL - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022013637": {"sku": "I00022", "produto": "TOP ASHLEY - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022013644": {"sku": "I00022", "produto": "TOP ASHLEY - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022013651": {"sku": "I00022", "produto": "TOP ASHLEY - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890000010139": {"sku": "I00096", "produto": "TOP AURORA - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890000010146": {"sku": "I00096", "produto": "TOP AURORA - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890000010153": {"sku": "I00096", "produto": "TOP AURORA - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890000010108": {"sku": "I00096", "produto": "TOP AURORA - INATIVO", "cor": "AMARELO", "tamanho": "P"}, "7890000010115": {"sku": "I00096", "produto": "TOP AURORA - INATIVO", "cor": "AMARELO", "tamanho": "M"}, "7890000010122": {"sku": "I00096", "produto": "TOP AURORA - INATIVO", "cor": "AMARELO", "tamanho": "G"}, "7890012019311": {"sku": "I00088", "produto": "TOP BA - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890012019328": {"sku": "I00088", "produto": "TOP BA - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890012019335": {"sku": "I00088", "produto": "TOP BA - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022016645": {"sku": "I00088", "produto": "TOP BA - INATIVO", "cor": "VERMELHO", "tamanho": "P"}, "7890022016652": {"sku": "I00088", "produto": "TOP BA - INATIVO", "cor": "VERMELHO", "tamanho": "M"}, "7890022016669": {"sku": "I00088", "produto": "TOP BA - INATIVO", "cor": "VERMELHO", "tamanho": "G"}, "7890022015037": {"sku": "I00085", "produto": "TOP BARBARA - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022015044": {"sku": "I00085", "produto": "TOP BARBARA - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022015051": {"sku": "I00085", "produto": "TOP BARBARA - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022015259": {"sku": "I00037", "produto": "TOP BELLY - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022015266": {"sku": "I00037", "produto": "TOP BELLY - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022015273": {"sku": "I00037", "produto": "TOP BELLY - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022014054": {"sku": "I00024", "produto": "TOP BILLIE - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022014061": {"sku": "I00024", "produto": "TOP BILLIE - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022014078": {"sku": "I00024", "produto": "TOP BILLIE - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890000010382": {"sku": "T00064", "produto": "TOP BONNIE", "cor": "PRETO", "tamanho": "P"}, "7890000010399": {"sku": "T00064", "produto": "TOP BONNIE", "cor": "PRETO", "tamanho": "M"}, "7890000010405": {"sku": "T00064", "produto": "TOP BONNIE", "cor": "PRETO", "tamanho": "G"}, "7890000010849": {"sku": "T00064", "produto": "TOP BONNIE", "cor": "VERMELHO", "tamanho": "P"}, "7890000010856": {"sku": "T00064", "produto": "TOP BONNIE", "cor": "VERMELHO", "tamanho": "M"}, "7890000010863": {"sku": "T00064", "produto": "TOP BONNIE", "cor": "VERMELHO", "tamanho": "G"}, "7890000011129": {"sku": "T00095", "produto": "TOP BRASIL", "cor": "AMARELO", "tamanho": "P"}, "7890000011136": {"sku": "T00095", "produto": "TOP BRASIL", "cor": "AMARELO", "tamanho": "M"}, "7890000011143": {"sku": "T00095", "produto": "TOP BRASIL", "cor": "AMARELO", "tamanho": "G"}, "7890000011327": {"sku": "T00095", "produto": "TOP BRASIL", "cor": "PRETO", "tamanho": "P"}, "7890000011334": {"sku": "T00095", "produto": "TOP BRASIL", "cor": "PRETO", "tamanho": "M"}, "7890000011341": {"sku": "T00095", "produto": "TOP BRASIL", "cor": "PRETO", "tamanho": "G"}, "7890022017574": {"sku": "I00093", "produto": "TOP BRIZA - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022017581": {"sku": "I00093", "produto": "TOP BRIZA - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022017598": {"sku": "I00093", "produto": "TOP BRIZA - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890012019397": {"sku": "I00065", "produto": "TOP CAMILA - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890012019403": {"sku": "I00065", "produto": "TOP CAMILA - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890012019410": {"sku": "I00065", "produto": "TOP CAMILA - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890012018772": {"sku": "I00065", "produto": "TOP CAMILA - INATIVO", "cor": "CHUMBO", "tamanho": "P"}, "7890012018789": {"sku": "I00065", "produto": "TOP CAMILA - INATIVO", "cor": "CHUMBO", "tamanho": "M"}, "7890012018796": {"sku": "I00065", "produto": "TOP CAMILA - INATIVO", "cor": "CHUMBO", "tamanho": "G"}, "7890012017393": {"sku": "I00064", "produto": "TOP CAPRI - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890012017409": {"sku": "I00064", "produto": "TOP CAPRI - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890012017416": {"sku": "I00064", "produto": "TOP CAPRI - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022014351": {"sku": "I00064", "produto": "TOP CAPRI - INATIVO", "cor": "BRANCO", "tamanho": "P"}, "7890022014368": {"sku": "I00064", "produto": "TOP CAPRI - INATIVO", "cor": "BRANCO", "tamanho": "M"}, "7890022014375": {"sku": "I00064", "produto": "TOP CAPRI - INATIVO", "cor": "BRANCO", "tamanho": "G"}, "7890012013005": {"sku": "I00062", "produto": "TOP CASACO KITTY - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890012013012": {"sku": "I00062", "produto": "TOP CASACO KITTY - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890012013029": {"sku": "I00062", "produto": "TOP CASACO KITTY - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022013729": {"sku": "I00105", "produto": "TOP CATARINA - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022013736": {"sku": "I00105", "produto": "TOP CATARINA - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022013743": {"sku": "I00105", "produto": "TOP CATARINA - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022015938": {"sku": "I00105", "produto": "TOP CATARINA - INATIVO", "cor": "MARROM", "tamanho": "P"}, "7890022015945": {"sku": "I00105", "produto": "TOP CATARINA - INATIVO", "cor": "MARROM", "tamanho": "M"}, "7890022015952": {"sku": "I00105", "produto": "TOP CATARINA - INATIVO", "cor": "MARROM", "tamanho": "G"}, "7890022016553": {"sku": "I00105", "produto": "TOP CATARINA - INATIVO", "cor": "VERMELHO", "tamanho": "P"}, "7890022016560": {"sku": "I00105", "produto": "TOP CATARINA - INATIVO", "cor": "VERMELHO", "tamanho": "M"}, "7890022016577": {"sku": "I00105", "produto": "TOP CATARINA - INATIVO", "cor": "VERMELHO", "tamanho": "G"}, "7890012013111": {"sku": "I00021", "produto": "TOP CECI - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890012013128": {"sku": "I00021", "produto": "TOP CECI - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890012013135": {"sku": "I00021", "produto": "TOP CECI - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022015990": {"sku": "I00063", "produto": "TOP CHIARA - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022016003": {"sku": "I00063", "produto": "TOP CHIARA - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022016010": {"sku": "I00063", "produto": "TOP CHIARA - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022018545": {"sku": "ZZZZZ19", "produto": "TOP CLOVER", "cor": "PRETO", "tamanho": "P"}, "7890022018544": {"sku": "ZZZZZ19", "produto": "TOP CLOVER", "cor": "PRETO", "tamanho": "M"}, "7890022018543": {"sku": "ZZZZZ19", "produto": "TOP CLOVER", "cor": "PRETO", "tamanho": "G"}, "7890022017543": {"sku": "I00036", "produto": "TOP CORAL - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022017550": {"sku": "I00036", "produto": "TOP CORAL - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022017567": {"sku": "I00036", "produto": "TOP CORAL - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022013996": {"sku": "I00044", "produto": "TOP DUA - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022014009": {"sku": "I00044", "produto": "TOP DUA - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022014016": {"sku": "I00044", "produto": "TOP DUA - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022017512": {"sku": "I00035", "produto": "TOP DUNA - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022017529": {"sku": "I00035", "produto": "TOP DUNA - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022017536": {"sku": "I00035", "produto": "TOP DUNA - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890000011976": {"sku": "T00099", "produto": "TOP FITNESS - TESTE", "cor": "MARROM", "tamanho": "P"}, "7890000011983": {"sku": "T00099", "produto": "TOP FITNESS - TESTE", "cor": "MARROM", "tamanho": "M"}, "7890000011990": {"sku": "T00099", "produto": "TOP FITNESS - TESTE", "cor": "MARROM", "tamanho": "G"}, "7890000012003": {"sku": "T00099", "produto": "TOP FITNESS - TESTE", "cor": "VERMELHO", "tamanho": "P"}, "7890000012010": {"sku": "T00099", "produto": "TOP FITNESS - TESTE", "cor": "VERMELHO", "tamanho": "M"}, "7890000012027": {"sku": "T00099", "produto": "TOP FITNESS - TESTE", "cor": "VERMELHO", "tamanho": "G"}, "7890000012140": {"sku": "T00100", "produto": "TOP FITNESS RVB - TESTE", "cor": "MARROM", "tamanho": "P"}, "7890000012157": {"sku": "T00100", "produto": "TOP FITNESS RVB - TESTE", "cor": "MARROM", "tamanho": "M"}, "7890000012164": {"sku": "T00100", "produto": "TOP FITNESS RVB - TESTE", "cor": "MARROM", "tamanho": "G"}, "7890000012171": {"sku": "T00100", "produto": "TOP FITNESS RVB - TESTE", "cor": "VERMELHO", "tamanho": "P"}, "7890000012188": {"sku": "T00100", "produto": "TOP FITNESS RVB - TESTE", "cor": "VERMELHO", "tamanho": "M"}, "7890000012195": {"sku": "T00100", "produto": "TOP FITNESS RVB - TESTE", "cor": "VERMELHO", "tamanho": "G"}, "7890012013081": {"sku": "T00010", "produto": "TOP GABRIELA", "cor": "PRETO", "tamanho": "P"}, "7890012013098": {"sku": "T00010", "produto": "TOP GABRIELA", "cor": "PRETO", "tamanho": "M"}, "7890012013104": {"sku": "T00010", "produto": "TOP GABRIELA", "cor": "PRETO", "tamanho": "G"}, "7890012017362": {"sku": "I00092", "produto": "TOP GRÉCIA - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890012017379": {"sku": "I00092", "produto": "TOP GRÉCIA - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890012017386": {"sku": "I00092", "produto": "TOP GRÉCIA - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890000011556": {"sku": "T00078", "produto": "TOP HAILEY", "cor": "PRETO", "tamanho": "P"}, "7890000011563": {"sku": "T00078", "produto": "TOP HAILEY", "cor": "PRETO", "tamanho": "M"}, "7890000011570": {"sku": "T00078", "produto": "TOP HAILEY", "cor": "PRETO", "tamanho": "G"}, "7890022018267": {"sku": "I00045", "produto": "TOP IVY - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022018274": {"sku": "I00045", "produto": "TOP IVY - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022018281": {"sku": "I00045", "produto": "TOP IVY - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022014269": {"sku": "T00059", "produto": "TOP KATY", "cor": "PRETO", "tamanho": "P"}, "7890022014276": {"sku": "T00059", "produto": "TOP KATY", "cor": "PRETO", "tamanho": "M"}, "7890022014283": {"sku": "T00059", "produto": "TOP KATY", "cor": "PRETO", "tamanho": "G"}, "7890000010191": {"sku": "T00082", "produto": "TOP LANA", "cor": "AMARELO", "tamanho": "P"}, "7890000010207": {"sku": "T00082", "produto": "TOP LANA", "cor": "AMARELO", "tamanho": "M"}, "7890000010214": {"sku": "T00082", "produto": "TOP LANA", "cor": "AMARELO", "tamanho": "G"}, "7890000010160": {"sku": "T00082", "produto": "TOP LANA", "cor": "PRETO", "tamanho": "P"}, "7890000010177": {"sku": "T00082", "produto": "TOP LANA", "cor": "PRETO", "tamanho": "M"}, "7890000010184": {"sku": "T00082", "produto": "TOP LANA", "cor": "PRETO", "tamanho": "G"}, "7890000010801": {"sku": "T00082", "produto": "TOP LANA", "cor": "VERMELHO", "tamanho": "P"}, "7890000010818": {"sku": "T00082", "produto": "TOP LANA", "cor": "VERMELHO", "tamanho": "M"}, "7890000010825": {"sku": "T00082", "produto": "TOP LANA", "cor": "VERMELHO", "tamanho": "G"}, "7890022018205": {"sku": "I00040", "produto": "TOP LARA - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022018212": {"sku": "I00040", "produto": "TOP LARA - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022018229": {"sku": "I00040", "produto": "TOP LARA - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022015372": {"sku": "I00031", "produto": "TOP LILLY - INATIVO", "cor": "VERMELHO", "tamanho": "P"}, "7890022015389": {"sku": "I00031", "produto": "TOP LILLY - INATIVO", "cor": "VERMELHO", "tamanho": "M"}, "7890022015396": {"sku": "I00031", "produto": "TOP LILLY - INATIVO", "cor": "VERMELHO", "tamanho": "G"}, "7890012019632": {"sku": "I00042", "produto": "TOP LUISA - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890012019649": {"sku": "I00042", "produto": "TOP LUISA - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890012019656": {"sku": "I00042", "produto": "TOP LUISA - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890012015566": {"sku": "I00028", "produto": "TOP MADDY - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890012015573": {"sku": "I00028", "produto": "TOP MADDY - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890012015580": {"sku": "I00028", "produto": "TOP MADDY - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022015228": {"sku": "I00034", "produto": "TOP MADONNA - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022015235": {"sku": "I00034", "produto": "TOP MADONNA - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022015242": {"sku": "I00034", "produto": "TOP MADONNA - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022013811": {"sku": "I00020", "produto": "TOP MAIA - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022013828": {"sku": "I00020", "produto": "TOP MAIA - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022013835": {"sku": "I00020", "produto": "TOP MAIA - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890012019809": {"sku": "T00002", "produto": "TOP MANDI", "cor": "PRETO", "tamanho": "P"}, "7890012019816": {"sku": "T00002", "produto": "TOP MANDI", "cor": "PRETO", "tamanho": "M"}, "7890012019823": {"sku": "T00002", "produto": "TOP MANDI", "cor": "PRETO", "tamanho": "G"}, "7890012019601": {"sku": "T00002", "produto": "TOP MANDI", "cor": "MARROM", "tamanho": "P"}, "7890012019618": {"sku": "T00002", "produto": "TOP MANDI", "cor": "MARROM", "tamanho": "M"}, "7890012019625": {"sku": "T00002", "produto": "TOP MANDI", "cor": "MARROM", "tamanho": "G"}, "7890012019830": {"sku": "T00002", "produto": "TOP MANDI", "cor": "VERMELHO", "tamanho": "P"}, "7890012019847": {"sku": "T00002", "produto": "TOP MANDI", "cor": "VERMELHO", "tamanho": "M"}, "7890012019854": {"sku": "T00002", "produto": "TOP MANDI", "cor": "VERMELHO", "tamanho": "G"}, "7890022013668": {"sku": "I00106", "produto": "TOP MARINA - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022013675": {"sku": "I00106", "produto": "TOP MARINA - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022013682": {"sku": "I00106", "produto": "TOP MARINA - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022018236": {"sku": "T00045", "produto": "TOP MIA", "cor": "PRETO", "tamanho": "P"}, "7890022018243": {"sku": "T00045", "produto": "TOP MIA", "cor": "PRETO", "tamanho": "M"}, "7890022018250": {"sku": "T00045", "produto": "TOP MIA", "cor": "PRETO", "tamanho": "G"}, "7890022018175": {"sku": "T00045", "produto": "TOP MIA", "cor": "BRANCO", "tamanho": "P"}, "7890022018182": {"sku": "T00045", "produto": "TOP MIA", "cor": "BRANCO", "tamanho": "M"}, "7890022018199": {"sku": "T00045", "produto": "TOP MIA", "cor": "BRANCO", "tamanho": "G"}, "7890000010962": {"sku": "T00045", "produto": "TOP MIA", "cor": "ONÇA", "tamanho": "P"}, "7890000010979": {"sku": "T00045", "produto": "TOP MIA", "cor": "ONÇA", "tamanho": "M"}, "7890000010986": {"sku": "T00045", "produto": "TOP MIA", "cor": "ONÇA", "tamanho": "G"}, "7890012013173": {"sku": "I00025", "produto": "TOP MILEY - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890012013180": {"sku": "I00025", "produto": "TOP MILEY - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890012013197": {"sku": "I00025", "produto": "TOP MILEY - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022016294": {"sku": "I00102", "produto": "TOP MILLI - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022016300": {"sku": "I00102", "produto": "TOP MILLI - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022016317": {"sku": "I00102", "produto": "TOP MILLI - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022017857": {"sku": "I00041", "produto": "TOP NALU - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022017864": {"sku": "I00041", "produto": "TOP NALU - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022017871": {"sku": "I00041", "produto": "TOP NALU - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890012010820": {"sku": "I00091", "produto": "TOP NATASHA - INATIVO", "cor": "BRANCO", "tamanho": "P"}, "7890012010837": {"sku": "I00091", "produto": "TOP NATASHA - INATIVO", "cor": "BRANCO", "tamanho": "M"}, "7890012010844": {"sku": "I00091", "produto": "TOP NATASHA - INATIVO", "cor": "BRANCO", "tamanho": "G"}, "7890012014514": {"sku": "I00091", "produto": "TOP NATASHA - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890012014521": {"sku": "I00091", "produto": "TOP NATASHA - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890012014538": {"sku": "I00091", "produto": "TOP NATASHA - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022018144": {"sku": "T00047", "produto": "TOP OFÉLIA", "cor": "PRETO", "tamanho": "P"}, "7890022018151": {"sku": "T00047", "produto": "TOP OFÉLIA", "cor": "PRETO", "tamanho": "M"}, "7890022018168": {"sku": "T00047", "produto": "TOP OFÉLIA", "cor": "PRETO", "tamanho": "G"}, "7890000010467": {"sku": "T00047", "produto": "TOP OFÉLIA", "cor": "BRANCO", "tamanho": "P"}, "7890000010474": {"sku": "T00047", "produto": "TOP OFÉLIA", "cor": "BRANCO", "tamanho": "M"}, "7890000010481": {"sku": "T00047", "produto": "TOP OFÉLIA", "cor": "BRANCO", "tamanho": "G"}, "7890000010887": {"sku": "T00047", "produto": "TOP OFÉLIA", "cor": "ONÇA", "tamanho": "P"}, "7890000010894": {"sku": "T00047", "produto": "TOP OFÉLIA", "cor": "ONÇA", "tamanho": "M"}, "7890000010900": {"sku": "T00047", "produto": "TOP OFÉLIA", "cor": "ONÇA", "tamanho": "G"}, "7890022013606": {"sku": "T00015", "produto": "TOP OLGA", "cor": "PRETO", "tamanho": "P"}, "7890022013613": {"sku": "T00015", "produto": "TOP OLGA", "cor": "PRETO", "tamanho": "M"}, "7890022013620": {"sku": "T00015", "produto": "TOP OLGA", "cor": "PRETO", "tamanho": "G"}, "7890022015969": {"sku": "T00015", "produto": "TOP OLGA", "cor": "VERMELHO", "tamanho": "P"}, "7890022015976": {"sku": "T00015", "produto": "TOP OLGA", "cor": "VERMELHO", "tamanho": "M"}, "7890022015983": {"sku": "T00015", "produto": "TOP OLGA", "cor": "VERMELHO", "tamanho": "G"}, "7890022016768": {"sku": "T00015", "produto": "TOP OLGA", "cor": "CINZA", "tamanho": "P"}, "7890022016775": {"sku": "T00015", "produto": "TOP OLGA", "cor": "CINZA", "tamanho": "M"}, "7890022016782": {"sku": "T00015", "produto": "TOP OLGA", "cor": "CINZA", "tamanho": "G"}, "7890022016799": {"sku": "T00029", "produto": "TOP PIETRA", "cor": "PRETO", "tamanho": "P"}, "7890022016805": {"sku": "T00029", "produto": "TOP PIETRA", "cor": "PRETO", "tamanho": "M"}, "7890022016812": {"sku": "T00029", "produto": "TOP PIETRA", "cor": "PRETO", "tamanho": "G"}, "7890022016942": {"sku": "T00029", "produto": "TOP PIETRA", "cor": "BRANCO", "tamanho": "P"}, "7890022016959": {"sku": "T00029", "produto": "TOP PIETRA", "cor": "BRANCO", "tamanho": "M"}, "7890022016966": {"sku": "T00029", "produto": "TOP PIETRA", "cor": "BRANCO", "tamanho": "G"}, "7890022016614": {"sku": "T00029", "produto": "TOP PIETRA", "cor": "VERMELHO", "tamanho": "P"}, "7890022016621": {"sku": "T00029", "produto": "TOP PIETRA", "cor": "VERMELHO", "tamanho": "M"}, "7890022016638": {"sku": "T00029", "produto": "TOP PIETRA", "cor": "VERMELHO", "tamanho": "G"}, "7890022015556": {"sku": "T00029", "produto": "TOP PIETRA", "cor": "LARANJA", "tamanho": "P"}, "7890022015563": {"sku": "T00029", "produto": "TOP PIETRA", "cor": "LARANJA", "tamanho": "M"}, "7890022015570": {"sku": "T00029", "produto": "TOP PIETRA", "cor": "LARANJA", "tamanho": "G"}, "7890000010924": {"sku": "T00029", "produto": "TOP PIETRA", "cor": "ONÇA", "tamanho": "P"}, "7890000010931": {"sku": "T00029", "produto": "TOP PIETRA", "cor": "ONÇA", "tamanho": "M"}, "7890000010948": {"sku": "T00029", "produto": "TOP PIETRA", "cor": "ONÇA", "tamanho": "G"}, "7890012016310": {"sku": "I00023", "produto": "TOP REGINA - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890012016327": {"sku": "I00023", "produto": "TOP REGINA - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890012016334": {"sku": "I00023", "produto": "TOP REGINA - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022015198": {"sku": "T00043", "produto": "TOP SABRINA", "cor": "PRETO", "tamanho": "P"}, "7890022015204": {"sku": "T00043", "produto": "TOP SABRINA", "cor": "PRETO", "tamanho": "M"}, "7890022015211": {"sku": "T00043", "produto": "TOP SABRINA", "cor": "PRETO", "tamanho": "G"}, "7890022015068": {"sku": "I00084", "produto": "TOP SASHA - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022015075": {"sku": "I00084", "produto": "TOP SASHA - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022015082": {"sku": "I00084", "produto": "TOP SASHA - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022015099": {"sku": "I00084", "produto": "TOP SASHA - INATIVO", "cor": "VERMELHO", "tamanho": "P"}, "7890022015105": {"sku": "I00084", "produto": "TOP SASHA - INATIVO", "cor": "VERMELHO", "tamanho": "M"}, "7890022015112": {"sku": "I00084", "produto": "TOP SASHA - INATIVO", "cor": "VERMELHO", "tamanho": "G"}, "7890022016973": {"sku": "I00038", "produto": "TOP SAVANA - INATIVO", "cor": "VERDE", "tamanho": "P"}, "7890022016980": {"sku": "I00038", "produto": "TOP SAVANA - INATIVO", "cor": "VERDE", "tamanho": "M"}, "7890022016997": {"sku": "I00038", "produto": "TOP SAVANA - INATIVO", "cor": "VERDE", "tamanho": "G"}, "7890012016693": {"sku": "I00019", "produto": "TOP SCARLLET - INATIVO", "cor": "PRETO", "tamanho": "PP"}, "7890012016709": {"sku": "I00019", "produto": "TOP SCARLLET - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890012016716": {"sku": "I00019", "produto": "TOP SCARLLET - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890012016723": {"sku": "I00019", "produto": "TOP SCARLLET - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022015006": {"sku": "I00107", "produto": "TOP SIDNEY - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022015013": {"sku": "I00107", "produto": "TOP SIDNEY - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022015020": {"sku": "I00107", "produto": "TOP SIDNEY - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890000010344": {"sku": "T00060", "produto": "TOP SKIN", "cor": "PRETO", "tamanho": "P"}, "7890000010351": {"sku": "T00060", "produto": "TOP SKIN", "cor": "PRETO", "tamanho": "M"}, "7890000010368": {"sku": "T00060", "produto": "TOP SKIN", "cor": "PRETO", "tamanho": "G"}, "7890000010023": {"sku": "BRI007", "produto": "TOP SURPRESA - PNG", "cor": "UNICA", "tamanho": "U"}, "7890012011124": {"sku": "I00087", "produto": "TOP TAKADA - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890012011131": {"sku": "I00087", "produto": "TOP TAKADA - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890012011148": {"sku": "I00087", "produto": "TOP TAKADA - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022013965": {"sku": "I00090", "produto": "TOP TAYLOR", "cor": "PRETO", "tamanho": "P"}, "7890022013972": {"sku": "I00090", "produto": "TOP TAYLOR", "cor": "PRETO", "tamanho": "M"}, "7890022013989": {"sku": "I00090", "produto": "TOP TAYLOR", "cor": "PRETO", "tamanho": "G"}, "7890022016676": {"sku": "I00090", "produto": "TOP TAYLOR", "cor": "VERMELHO", "tamanho": "P"}, "7890022016683": {"sku": "I00090", "produto": "TOP TAYLOR", "cor": "VERMELHO", "tamanho": "M"}, "7890022016690": {"sku": "I00090", "produto": "TOP TAYLOR", "cor": "VERMELHO", "tamanho": "G"}, "7890022017130": {"sku": "I00090", "produto": "TOP TAYLOR", "cor": "BRANCO", "tamanho": "P"}, "7890022017147": {"sku": "I00090", "produto": "TOP TAYLOR", "cor": "BRANCO", "tamanho": "M"}, "7890022017154": {"sku": "I00090", "produto": "TOP TAYLOR", "cor": "BRANCO", "tamanho": "G"}, "7890022017819": {"sku": "T00076", "produto": "TOP TRICOT ESTRELA", "cor": "PRETO", "tamanho": "P"}, "7890022017826": {"sku": "T00076", "produto": "TOP TRICOT ESTRELA", "cor": "PRETO", "tamanho": "M"}, "7890022017833": {"sku": "T00076", "produto": "TOP TRICOT ESTRELA", "cor": "PRETO", "tamanho": "G"}, "7890022016829": {"sku": "T00057", "produto": "TOP TRICOT LUCY", "cor": "PRETO", "tamanho": "P"}, "7890022016836": {"sku": "T00057", "produto": "TOP TRICOT LUCY", "cor": "PRETO", "tamanho": "M"}, "7890022016843": {"sku": "T00057", "produto": "TOP TRICOT LUCY", "cor": "PRETO", "tamanho": "G"}, "7890022013576": {"sku": "T00057", "produto": "TOP TRICOT LUCY", "cor": "CINZA", "tamanho": "P"}, "7890022013583": {"sku": "T00057", "produto": "TOP TRICOT LUCY", "cor": "CINZA", "tamanho": "M"}, "7890022013590": {"sku": "T00057", "produto": "TOP TRICOT LUCY", "cor": "CINZA", "tamanho": "G"}, "7890022016850": {"sku": "T00057", "produto": "TOP TRICOT LUCY", "cor": "VERMELHO", "tamanho": "P"}, "7890022016867": {"sku": "T00057", "produto": "TOP TRICOT LUCY", "cor": "VERMELHO", "tamanho": "M"}, "7890022016874": {"sku": "T00057", "produto": "TOP TRICOT LUCY", "cor": "VERMELHO", "tamanho": "G"}, "7890022017482": {"sku": "I00094", "produto": "TOP TULUM - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022017499": {"sku": "I00094", "produto": "TOP TULUM - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022017505": {"sku": "I00094", "produto": "TOP TULUM - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022017451": {"sku": "I00094", "produto": "TOP TULUM - INATIVO", "cor": "BRANCO", "tamanho": "P"}, "7890022017468": {"sku": "I00094", "produto": "TOP TULUM - INATIVO", "cor": "BRANCO", "tamanho": "M"}, "7890022017475": {"sku": "I00094", "produto": "TOP TULUM - INATIVO", "cor": "BRANCO", "tamanho": "G"}, "7890022017420": {"sku": "I00094", "produto": "TOP TULUM - INATIVO", "cor": "VERMELHO", "tamanho": "P"}, "7890022017437": {"sku": "I00094", "produto": "TOP TULUM - INATIVO", "cor": "VERMELHO", "tamanho": "M"}, "7890022017444": {"sku": "I00094", "produto": "TOP TULUM - INATIVO", "cor": "VERMELHO", "tamanho": "G"}, "7890022016355": {"sku": "I00027", "produto": "TOP VIOLA - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022016362": {"sku": "I00027", "produto": "TOP VIOLA - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022016379": {"sku": "I00027", "produto": "TOP VIOLA - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890012011094": {"sku": "I00103", "produto": "TOP YAS", "cor": "PRETO", "tamanho": "P"}, "7890012011100": {"sku": "I00103", "produto": "TOP YAS", "cor": "PRETO", "tamanho": "M"}, "7890012011117": {"sku": "I00103", "produto": "TOP YAS", "cor": "PRETO", "tamanho": "G"}, "7890012011063": {"sku": "I00103", "produto": "TOP YAS", "cor": "MARROM", "tamanho": "P"}, "7890012011070": {"sku": "I00103", "produto": "TOP YAS", "cor": "MARROM", "tamanho": "M"}, "7890012011087": {"sku": "I00103", "produto": "TOP YAS", "cor": "MARROM", "tamanho": "G"}, "7890012011155": {"sku": "I00033", "produto": "TOP YASMIN - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890012011162": {"sku": "I00033", "produto": "TOP YASMIN - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890012011179": {"sku": "I00033", "produto": "TOP YASMIN - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890012013333": {"sku": "I00032", "produto": "TOP YUMI - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890012013340": {"sku": "I00032", "produto": "TOP YUMI - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890012013357": {"sku": "I00032", "produto": "TOP YUMI - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890012019519": {"sku": "I00086", "produto": "TOP ZINN - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890012019526": {"sku": "I00086", "produto": "TOP ZINN - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890012019533": {"sku": "I00086", "produto": "TOP ZINN - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022015792": {"sku": "I00086", "produto": "TOP ZINN - INATIVO", "cor": "MARROM", "tamanho": "P"}, "7890022015808": {"sku": "I00086", "produto": "TOP ZINN - INATIVO", "cor": "MARROM", "tamanho": "M"}, "7890022015815": {"sku": "I00086", "produto": "TOP ZINN - INATIVO", "cor": "MARROM", "tamanho": "G"}, "7890012015238": {"sku": "I00099", "produto": "VESTIDO ALBA", "cor": "PRETO", "tamanho": "PP"}, "7890012015245": {"sku": "I00099", "produto": "VESTIDO ALBA", "cor": "PRETO", "tamanho": "P"}, "7890012015252": {"sku": "I00099", "produto": "VESTIDO ALBA", "cor": "PRETO", "tamanho": "M"}, "7890012015269": {"sku": "I00099", "produto": "VESTIDO ALBA", "cor": "PRETO", "tamanho": "G"}, "7890022017727": {"sku": "I00099", "produto": "VESTIDO ALBA", "cor": "VERMELHO", "tamanho": "PP"}, "7890022017734": {"sku": "I00099", "produto": "VESTIDO ALBA", "cor": "VERMELHO", "tamanho": "P"}, "7890022017741": {"sku": "I00099", "produto": "VESTIDO ALBA", "cor": "VERMELHO", "tamanho": "M"}, "7890022017758": {"sku": "I00099", "produto": "VESTIDO ALBA", "cor": "VERMELHO", "tamanho": "G"}, "7890022017604": {"sku": "I00099", "produto": "VESTIDO ALBA", "cor": "PRATA", "tamanho": "P"}, "7890022017611": {"sku": "I00099", "produto": "VESTIDO ALBA", "cor": "PRATA", "tamanho": "M"}, "7890022017628": {"sku": "I00099", "produto": "VESTIDO ALBA", "cor": "PRATA", "tamanho": "G"}, "7890012016945": {"sku": "V00001", "produto": "VESTIDO ALICIA", "cor": "PRETO", "tamanho": "P"}, "7890012016952": {"sku": "V00001", "produto": "VESTIDO ALICIA", "cor": "PRETO", "tamanho": "M"}, "7890012016969": {"sku": "V00001", "produto": "VESTIDO ALICIA", "cor": "PRETO", "tamanho": "G"}, "7890022015877": {"sku": "V00001", "produto": "VESTIDO ALICIA", "cor": "MARROM", "tamanho": "P"}, "7890022015884": {"sku": "V00001", "produto": "VESTIDO ALICIA", "cor": "MARROM", "tamanho": "M"}, "7890022015891": {"sku": "V00001", "produto": "VESTIDO ALICIA", "cor": "MARROM", "tamanho": "G"}, "7890022018458": {"sku": "I00066", "produto": "VESTIDO ANANDA - INATIVO", "cor": "PRETO", "tamanho": "PP"}, "7890022018455": {"sku": "I00066", "produto": "VESTIDO ANANDA - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022018454": {"sku": "I00066", "produto": "VESTIDO ANANDA - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022018453": {"sku": "I00066", "produto": "VESTIDO ANANDA - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022018456": {"sku": "I00066", "produto": "VESTIDO ANANDA - INATIVO", "cor": "PRETO", "tamanho": "GG"}, "7890022018457": {"sku": "I00066", "produto": "VESTIDO ANANDA - INATIVO", "cor": "PRETO", "tamanho": "XGG"}, "7890000010689": {"sku": "V00032", "produto": "VESTIDO ANY", "cor": "ONÇA", "tamanho": "P"}, "7890000010696": {"sku": "V00032", "produto": "VESTIDO ANY", "cor": "ONÇA", "tamanho": "M"}, "7890000010702": {"sku": "V00032", "produto": "VESTIDO ANY", "cor": "ONÇA", "tamanho": "G"}, "7890000011242": {"sku": "V00032", "produto": "VESTIDO ANY", "cor": "PRETO", "tamanho": "P"}, "7890000011259": {"sku": "V00032", "produto": "VESTIDO ANY", "cor": "PRETO", "tamanho": "M"}, "7890000011266": {"sku": "V00032", "produto": "VESTIDO ANY", "cor": "PRETO", "tamanho": "G"}, "7890000011648": {"sku": "V00032", "produto": "VESTIDO ANY", "cor": "OFF WHITE", "tamanho": "P"}, "7890000011655": {"sku": "V00032", "produto": "VESTIDO ANY", "cor": "OFF WHITE", "tamanho": "M"}, "7890000011662": {"sku": "V00032", "produto": "VESTIDO ANY", "cor": "OFF WHITE", "tamanho": "G"}, "7890000011679": {"sku": "V00032", "produto": "VESTIDO ANY", "cor": "VERMELHO", "tamanho": "P"}, "7890000011686": {"sku": "V00032", "produto": "VESTIDO ANY", "cor": "VERMELHO", "tamanho": "M"}, "7890000011693": {"sku": "V00032", "produto": "VESTIDO ANY", "cor": "VERMELHO", "tamanho": "G"}, "7890000012669": {"sku": "V00033", "produto": "VESTIDO ANY BABADOS TESTE", "cor": "PRETO", "tamanho": "P"}, "7890000012676": {"sku": "V00033", "produto": "VESTIDO ANY BABADOS TESTE", "cor": "PRETO", "tamanho": "M"}, "7890000012683": {"sku": "V00033", "produto": "VESTIDO ANY BABADOS TESTE", "cor": "PRETO", "tamanho": "G"}, "7890022014146": {"sku": "I00049", "produto": "VESTIDO ARIANA - INATIVO", "cor": "CINZA", "tamanho": "P"}, "7890022014153": {"sku": "I00049", "produto": "VESTIDO ARIANA - INATIVO", "cor": "CINZA", "tamanho": "M"}, "7890022014160": {"sku": "I00049", "produto": "VESTIDO ARIANA - INATIVO", "cor": "CINZA", "tamanho": "G"}, "7890022015679": {"sku": "V00010", "produto": "VESTIDO BELLA", "cor": "PRETO", "tamanho": "P"}, "7890022015686": {"sku": "V00010", "produto": "VESTIDO BELLA", "cor": "PRETO", "tamanho": "M"}, "7890022015693": {"sku": "V00010", "produto": "VESTIDO BELLA", "cor": "PRETO", "tamanho": "G"}, "7890022016522": {"sku": "V00010", "produto": "VESTIDO BELLA", "cor": "VERMELHO", "tamanho": "P"}, "7890022016539": {"sku": "V00010", "produto": "VESTIDO BELLA", "cor": "VERMELHO", "tamanho": "M"}, "7890022016546": {"sku": "V00010", "produto": "VESTIDO BELLA", "cor": "VERMELHO", "tamanho": "G"}, "7890022017369": {"sku": "I00100", "produto": "VESTIDO BÚZIOS - INATIVO", "cor": "BRANCO", "tamanho": "P"}, "7890022017376": {"sku": "I00100", "produto": "VESTIDO BÚZIOS - INATIVO", "cor": "BRANCO", "tamanho": "M"}, "7890022017383": {"sku": "I00100", "produto": "VESTIDO BÚZIOS - INATIVO", "cor": "BRANCO", "tamanho": "G"}, "7890022015709": {"sku": "I00068", "produto": "VESTIDO CELINA - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022015716": {"sku": "I00068", "produto": "VESTIDO CELINA - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022015723": {"sku": "I00068", "produto": "VESTIDO CELINA - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022017192": {"sku": "I00068", "produto": "VESTIDO CELINA - INATIVO", "cor": "MARROM", "tamanho": "P"}, "7890022017208": {"sku": "I00068", "produto": "VESTIDO CELINA - INATIVO", "cor": "MARROM", "tamanho": "M"}, "7890022017215": {"sku": "I00068", "produto": "VESTIDO CELINA - INATIVO", "cor": "MARROM", "tamanho": "G"}, "7890022014207": {"sku": "I00050", "produto": "VESTIDO CLARICE- INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022014214": {"sku": "I00050", "produto": "VESTIDO CLARICE- INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022014221": {"sku": "I00050", "produto": "VESTIDO CLARICE- INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022015907": {"sku": "I00050", "produto": "VESTIDO CLARICE- INATIVO", "cor": "MARROM", "tamanho": "P"}, "7890022015914": {"sku": "I00050", "produto": "VESTIDO CLARICE- INATIVO", "cor": "MARROM", "tamanho": "M"}, "7890022015921": {"sku": "I00050", "produto": "VESTIDO CLARICE- INATIVO", "cor": "MARROM", "tamanho": "G"}, "7890022014115": {"sku": "I00048", "produto": "VESTIDO DONATA - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022014122": {"sku": "I00048", "produto": "VESTIDO DONATA - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022014139": {"sku": "I00048", "produto": "VESTIDO DONATA - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022014177": {"sku": "I00048", "produto": "VESTIDO DONATA - INATIVO", "cor": "VERMELHO", "tamanho": "P"}, "7890022014184": {"sku": "I00048", "produto": "VESTIDO DONATA - INATIVO", "cor": "VERMELHO", "tamanho": "M"}, "7890022014191": {"sku": "I00048", "produto": "VESTIDO DONATA - INATIVO", "cor": "VERMELHO", "tamanho": "G"}, "7890012016600": {"sku": "I00098", "produto": "VESTIDO EMMA - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890012016617": {"sku": "I00098", "produto": "VESTIDO EMMA - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890012016624": {"sku": "I00098", "produto": "VESTIDO EMMA - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022015129": {"sku": "I00098", "produto": "VESTIDO EMMA - INATIVO", "cor": "MARROM", "tamanho": "P"}, "7890022015136": {"sku": "I00098", "produto": "VESTIDO EMMA - INATIVO", "cor": "MARROM", "tamanho": "M"}, "7890022015143": {"sku": "I00098", "produto": "VESTIDO EMMA - INATIVO", "cor": "MARROM", "tamanho": "G"}, "7890022015648": {"sku": "I00054", "produto": "VESTIDO JASMINE - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022015655": {"sku": "I00054", "produto": "VESTIDO JASMINE - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022015662": {"sku": "I00054", "produto": "VESTIDO JASMINE - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890000013185": {"sku": "V00034", "produto": "VESTIDO JULIETTA", "cor": "PRETO", "tamanho": "P"}, "7890000013192": {"sku": "V00034", "produto": "VESTIDO JULIETTA", "cor": "PRETO", "tamanho": "M"}, "7890000013208": {"sku": "V00034", "produto": "VESTIDO JULIETTA", "cor": "PRETO", "tamanho": "G"}, "7890022014085": {"sku": "I00047", "produto": "VESTIDO LADY - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022014092": {"sku": "I00047", "produto": "VESTIDO LADY - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022014108": {"sku": "I00047", "produto": "VESTIDO LADY - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890012013142": {"sku": "V00002", "produto": "VESTIDO LIS", "cor": "PRETO", "tamanho": "P"}, "7890012013159": {"sku": "V00002", "produto": "VESTIDO LIS", "cor": "PRETO", "tamanho": "M"}, "7890012013166": {"sku": "V00002", "produto": "VESTIDO LIS", "cor": "PRETO", "tamanho": "G"}, "7890022017161": {"sku": "V00002", "produto": "VESTIDO LIS", "cor": "MARROM", "tamanho": "P"}, "7890022017178": {"sku": "V00002", "produto": "VESTIDO LIS", "cor": "MARROM", "tamanho": "M"}, "7890022017185": {"sku": "V00002", "produto": "VESTIDO LIS", "cor": "MARROM", "tamanho": "G"}, "7890022015617": {"sku": "V00005", "produto": "VESTIDO LUA", "cor": "PRETO", "tamanho": "P"}, "7890022015624": {"sku": "V00005", "produto": "VESTIDO LUA", "cor": "PRETO", "tamanho": "M"}, "7890022015631": {"sku": "V00005", "produto": "VESTIDO LUA", "cor": "PRETO", "tamanho": "G"}, "7890022017031": {"sku": "I00053", "produto": "VESTIDO LULU - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022017048": {"sku": "I00053", "produto": "VESTIDO LULU - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022017055": {"sku": "I00053", "produto": "VESTIDO LULU - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890000010078": {"sku": "I00053", "produto": "VESTIDO LULU - INATIVO", "cor": "AMARELO", "tamanho": "P"}, "7890000010085": {"sku": "I00053", "produto": "VESTIDO LULU - INATIVO", "cor": "AMARELO", "tamanho": "M"}, "7890000010092": {"sku": "I00053", "produto": "VESTIDO LULU - INATIVO", "cor": "AMARELO", "tamanho": "G"}, "7890022016263": {"sku": "I00052", "produto": "VESTIDO LUNA - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022016270": {"sku": "I00052", "produto": "VESTIDO LUNA - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022016287": {"sku": "I00052", "produto": "VESTIDO LUNA - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022017390": {"sku": "V00016", "produto": "VESTIDO PÉROLA", "cor": "BRANCO", "tamanho": "P"}, "7890022017406": {"sku": "V00016", "produto": "VESTIDO PÉROLA", "cor": "BRANCO", "tamanho": "M"}, "7890022017413": {"sku": "V00016", "produto": "VESTIDO PÉROLA", "cor": "BRANCO", "tamanho": "G"}, "7890022017789": {"sku": "V00016", "produto": "VESTIDO PÉROLA", "cor": "PRETO", "tamanho": "P"}, "7890022017796": {"sku": "V00016", "produto": "VESTIDO PÉROLA", "cor": "PRETO", "tamanho": "M"}, "7890022017802": {"sku": "V00016", "produto": "VESTIDO PÉROLA", "cor": "PRETO", "tamanho": "G"}, "7890022018452": {"sku": "I00074", "produto": "VESTIDO SERENA - INATIVO", "cor": "PRETO", "tamanho": "PP"}, "7890022018449": {"sku": "I00074", "produto": "VESTIDO SERENA - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022018448": {"sku": "I00074", "produto": "VESTIDO SERENA - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022018447": {"sku": "I00074", "produto": "VESTIDO SERENA - INATIVO", "cor": "PRETO", "tamanho": "G"}, "7890022018450": {"sku": "I00074", "produto": "VESTIDO SERENA - INATIVO", "cor": "PRETO", "tamanho": "GG"}, "7890022018451": {"sku": "I00074", "produto": "VESTIDO SERENA - INATIVO", "cor": "PRETO", "tamanho": "XGG"}, "7890022018359": {"sku": "I00069", "produto": "VESTIDO ÍSIS - INATIVO", "cor": "PRETO", "tamanho": "P"}, "7890022018366": {"sku": "I00069", "produto": "VESTIDO ÍSIS - INATIVO", "cor": "PRETO", "tamanho": "M"}, "7890022018373": {"sku": "I00069", "produto": "VESTIDO ÍSIS - INATIVO", "cor": "PRETO", "tamanho": "G"}};
+
+var usuarioLogado = '', isMaster = false;
+var invAtivo = null;       // {id, nome} ou null = contagem livre
+var localAtivo = '';       // local bipado
+var itemAtivo = null;      // {sku, produto, cor, tamanho, ean, cadastrado}
+var modoColetor = true;    // true=coletor, false=celular
+var filaOffline = [];
+try{ filaOffline = JSON.parse(localStorage.getItem('monitor_fila')||'[]'); }catch(e){}
+
+// ── LOGIN ──────────────────────────────────────────────────
+window.addEventListener('load', function(){
+  document.getElementById('login-overlay').style.display = 'flex';
+  document.getElementById('login-user').focus();
+});
+
+function fazerLogin(){
+  var user = (document.getElementById('login-user').value||'').trim();
+  var pass = (document.getElementById('login-pass').value||'').trim();
+  if(!user||!pass){ erroLogin('Preencha usuário e senha'); return; }
+  var btn = document.getElementById('btn-login');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
+  sbGet('login?usuario=eq.'+encodeURIComponent(user)+'&senha=eq.'+encodeURIComponent(pass)+'&select=usuario,nome,perfil')
+    .then(function(r){ return r.json(); })
+    .then(function(rows){
+      var d = rows && rows[0];
+      if(d){
+        var master = (d.perfil||'').toUpperCase()==='MASTER';
+        usuarioLogado = d.nome; isMaster = master;
+        document.getElementById('login-overlay').style.display = 'none';
+        document.getElementById('topbar-nome').textContent = '👤 '+d.nome;
+        document.getElementById('statusConn').style.background = 'var(--ok-bg)';
+        document.getElementById('statusConn').style.color = 'var(--ok-txt)';
+        document.getElementById('statusConn').textContent = '✅';
+        document.getElementById('bottom-nav').style.display = 'flex';
+        if(isMaster) document.getElementById('btn-nav-master').style.display = 'flex';
+        carregarInventarios();
+        atualizarBadgeFila();
+      } else {
+        erroLogin('Usuário ou senha incorretos');
+        btn.disabled=false; btn.innerHTML='Entrar';
+      }
+    })
+    .catch(function(e){ erroLogin('Erro: '+e.message); btn.disabled=false; btn.innerHTML='Entrar'; });
+}
+function erroLogin(msg){
+  var el=document.getElementById('login-erro');
+  el.textContent='⚠️ '+msg; el.style.cssText='display:block;background:var(--bad-bg);color:var(--bad-txt);border-radius:8px;padding:10px 12px;font-size:12px;font-weight:700;margin-bottom:12px;text-align:center;';
+}
+
+// ── MODO COLETOR / CELULAR ─────────────────────────────────
+function alternarModo(){
+  modoColetor = !modoColetor;
+  document.getElementById('modo-badge-btn').textContent = modoColetor ? '📡 Coletor' : '📱 Celular';
+  document.getElementById('card-bipe-coletor').style.display = modoColetor ? '' : 'none';
+  document.getElementById('card-bipe-celular').style.display = modoColetor ? 'none' : '';
+  resetarBipagem();
+}
+
+// ── NAVEGAÇÃO ──────────────────────────────────────────────
+function irPara(pagina){
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+  document.getElementById('page-'+pagina).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(function(b){ b.classList.remove('active'); });
+  var nb = document.getElementById('btn-nav-'+pagina);
+  if(nb) nb.classList.add('active');
+  if(pagina==='master') carregarMasterInventarios();
+}
+
+function abrirMonitor(inv){
+  invAtivo = inv;
+  document.getElementById('monitor-tipo-label').textContent = inv ? 'Inventário' : 'Contagem Livre';
+  document.getElementById('monitor-titulo').textContent = inv ? inv.nome : 'Bipe o local e o item';
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+  document.getElementById('page-monitor').classList.add('active');
+  resetarBipagem();
+  carregarHistorico();
+  setTimeout(function(){
+    if(modoColetor) document.getElementById('inp-bipe').focus();
+    else document.getElementById('inp-local-cel').focus();
+  }, 100);
+}
+
+function voltarInventarios(){
+  invAtivo = null;
+  irPara('inventarios');
+  carregarInventarios();
+}
+
+// ── INVENTÁRIOS ────────────────────────────────────────────
+function carregarInventarios(){
+  sbGet('inventarios?select=id,nome,status,criado_em,master,lancamentos&order=criado_em.desc')
+    .then(function(r){ return r.json(); })
+    .then(function(rows){
+      renderInventarios((rows||[]).map(function(r){
+        return {id:r.id,nome:r.nome,status:r.status,
+                criado:r.criado_em?r.criado_em.substring(0,10):'',
+                master:r.master,lancamentos:r.lancamentos||0};
+      }));
+    }).catch(function(){});
+}
+
+function renderInventarios(lista){
+  var el = document.getElementById('lista-inventarios');
+  var abertos = lista.filter(function(i){ return i.status==='ABERTO'; });
+  if(!abertos.length){
+    el.innerHTML = '<div style="font-size:12px;color:var(--txt-s);padding:8px 0;">Nenhum inventário aberto no momento.</div>';
+    return;
+  }
+  el.innerHTML = abertos.map(function(inv){
+    return '<div class="inv-card" data-inv="'+encodeURIComponent(JSON.stringify(inv))+'">'+
+      '<div><div class="inv-nome">'+inv.nome+'</div>'+
+      '<div class="inv-meta">'+inv.lancamentos+' lançamentos · '+inv.criado+'</div>'+
+      '<span class="inv-status st-aberto">🟢 Aberto</span></div>'+
+      '<div style="font-size:20px;color:var(--roxo-cl);">›</div></div>';
+  }).join('');
+  el.querySelectorAll('.inv-card').forEach(function(card){
+    card.addEventListener('click', function(){
+      abrirMonitor(JSON.parse(decodeURIComponent(this.getAttribute('data-inv'))));
+    });
+  });
+}
+
+// ── BIPAGEM — LÓGICA ACUMULO POR LOCAL ────────────────────
+var estadoBipe = 'local';
+var acumuladorLocal = {};
+var primeiroEanLocal = '';
+
+function resetarBipagem(){
+  estadoBipe = 'local';
+  localAtivo = '';
+  itemAtivo = null;
+  acumuladorLocal = {};
+  primeiroEanLocal = '';
+  document.getElementById('card-aguardando').style.display = '';
+  document.getElementById('card-local-ativo').style.display = 'none';
+  document.getElementById('alerta-item-diferente').style.display = 'none';
+  document.getElementById('inp-bipe').value = '';
+  document.getElementById('inp-local-cel').value = '';
+  document.getElementById('inp-ean-cel').value = '';
+  document.getElementById('bipe-hint').textContent = 'Bipe o QR do LOCAL primeiro';
+  document.getElementById('celular-local-wrap').style.opacity = '1';
+  document.getElementById('celular-local-wrap').style.pointerEvents = '';
+  document.getElementById('celular-ean-wrap').style.opacity = '.4';
+  document.getElementById('celular-ean-wrap').style.pointerEvents = 'none';
+  setTimeout(function(){
+    if(modoColetor) document.getElementById('inp-bipe').focus();
+    else document.getElementById('inp-local-cel').focus();
+  }, 100);
+}
+
+function setStep(){}
+
+function renderItensLocal(){
+  var el = document.getElementById('itens-local');
+  var keys = Object.keys(acumuladorLocal);
+  if(!keys.length){ el.innerHTML=''; return; }
+  el.innerHTML = keys.map(function(ean){
+    var it = acumuladorLocal[ean];
+    var nome = it.cadastrado ? it.produto+' · '+it.cor+' · '+it.tamanho : '⚠️ EAN '+ean;
+    return '<div style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.15);border-radius:8px;padding:8px 12px;margin-top:6px;">'+
+      '<div style="font-size:12px;color:#fff;font-weight:700;">'+nome+'</div>'+
+      '<div style="background:#fff;color:var(--roxo);padding:3px 12px;border-radius:20px;font-weight:900;font-size:14px;">'+it.qtd+'</div>'+
+      '</div>';
+  }).join('');
+}
+
+var _ultimoBipe = 0;
+var DEBOUNCE_MS = 300;
+
+function onBipeKeydown(evt){
+  if(evt.key==='Enter'){
+    evt.preventDefault();
+    var val = document.getElementById('inp-bipe').value.trim();
+    if(!val) return;
+    var agora = Date.now();
+    if(agora - _ultimoBipe < DEBOUNCE_MS){ document.getElementById('inp-bipe').value=''; return; }
+    _ultimoBipe = agora;
+    processarBipe(val);
+    document.getElementById('inp-bipe').value = '';
+  }
+}
+function onBipeInput(val){
+  if(estadoBipe==='item' && val.length===13 && /^\d+$/.test(val)){
+    var agora = Date.now();
+    if(agora - _ultimoBipe < DEBOUNCE_MS){ return; }
+    _ultimoBipe = agora;
+    setTimeout(function(){
+      processarBipe(val);
+      document.getElementById('inp-bipe').value = '';
+    }, 50);
+  }
+}
+
+function processarBipe(val){
+  val = val.trim();
+  var ehLocal = /^[A-Z]{1,2}\d+\.\d+$/i.test(val);
+  if(ehLocal){
+    if(localAtivo){
+      // Fecha local anterior (com ou sem itens — vazio também registra)
+      enviarAcumulador(function(){ confirmarLocal(val); });
+    } else {
+      confirmarLocal(val);
+    }
+  } else {
+    if(estadoBipe==='local') toast('⚠️ Bipe o LOCAL primeiro');
+    else confirmarEan(val);
+  }
+}
+
+function confirmarLocal(val){
+  localAtivo = val.toUpperCase();
+  estadoBipe = 'item';
+  acumuladorLocal = {};
+  primeiroEanLocal = '';
+  document.getElementById('card-aguardando').style.display = 'none';
+  document.getElementById('card-local-ativo').style.display = '';
+  document.getElementById('alerta-item-diferente').style.display = 'none';
+  document.getElementById('local-ativo-label').textContent = localAtivo;
+  document.getElementById('itens-local').innerHTML = '';
+  document.getElementById('bipe-hint').textContent = 'Local: '+localAtivo+' — Bipe os itens';
+  document.getElementById('celular-ean-wrap').style.opacity = '1';
+  document.getElementById('celular-ean-wrap').style.pointerEvents = '';
+  document.getElementById('celular-local-wrap').style.opacity = '.6';
+  document.getElementById('celular-local-wrap').style.pointerEvents = 'none';
+  if(!modoColetor) setTimeout(function(){ document.getElementById('inp-ean-cel').focus(); }, 100);
+  toast('📍 Local: '+localAtivo);
+}
+
+function confirmarLocalCelular(){
+  var val = document.getElementById('inp-local-cel').value.trim();
+  if(!val){ toast('⚠️ Digite o local'); return; }
+  if(localAtivo){
+    enviarAcumulador(function(){ confirmarLocal(val); });
+  } else {
+    confirmarLocal(val);
+  }
+}
+
+function confirmarEan(ean){
+  ean = ean.trim();
+  if(!ean) return;
+  var info = EAN_LOOKUP[ean];
+  var cadastrado = !!info;
+  if(primeiroEanLocal && ean !== primeiroEanLocal){
+    var nomeNovo = cadastrado ? info.produto+' · '+info.cor+' · '+info.tamanho : 'EAN '+ean;
+    var it0 = acumuladorLocal[primeiroEanLocal];
+    var nomeRef = it0 ? it0.produto+' · '+it0.cor+' · '+it0.tamanho : 'EAN '+primeiroEanLocal;
+    document.getElementById('alerta-detalhe').textContent = 'Este local tem: '+nomeRef+' | Bipado: '+nomeNovo;
+    document.getElementById('alerta-item-diferente').style.display = '';
+    // Marca TODOS os itens já acumulados com ANOMALIA - VERIFICAR
+    Object.keys(acumuladorLocal).forEach(function(k){
+      acumuladorLocal[k].anomalia = true;
+    });
+  }
+  // Se já tem anomalia no local, marca o item atual também
+  if(Object.keys(acumuladorLocal).some(function(k){ return acumuladorLocal[k].anomalia; })){
+    // NÃO cria item vazio aqui — deixa o bloco abaixo criar com dados corretos
+    if(acumuladorLocal[ean]) acumuladorLocal[ean].anomalia = true;
+  }
+  if(!primeiroEanLocal) primeiroEanLocal = ean;
+  if(!acumuladorLocal[ean]){
+    acumuladorLocal[ean] = {
+      sku: cadastrado?info.sku:'', produto: cadastrado?info.produto:'',
+      cor: cadastrado?info.cor:'', tamanho: cadastrado?info.tamanho:'',
+      ean: ean, cadastrado: cadastrado, qtd: 0
+    };
+  }
+  acumuladorLocal[ean].qtd++;
+  renderItensLocal();
+  var nome = cadastrado ? info.produto+' '+info.cor+' '+info.tamanho : 'EAN '+ean;
+  toast('✅ '+nome+' — '+acumuladorLocal[ean].qtd+'x');
+}
+
+function confirmarEanCelular(){
+  var val = document.getElementById('inp-ean-cel').value.trim();
+  if(!val) return;
+  confirmarEan(val);
+  document.getElementById('inp-ean-cel').value = '';
+}
+
+function ocultarAlerta(){
+  document.getElementById('alerta-item-diferente').style.display = 'none';
+}
+
+function fecharLocalAtual(){
+  if(!localAtivo){ toast('⚠️ Nenhum local ativo'); return; }
+  var localAnterior = localAtivo;
+  enviarAcumulador(function(){
+    resetarBipagem();
+    carregarHistorico();
+    toastLocalFinalizado(localAnterior);
+    if(modoColetor){
+      setTimeout(function(){ document.getElementById('inp-bipe').focus(); }, 1100);
+    }
+  });
+}
+
+function enviarAcumulador(callback){
+  var itens = Object.values(acumuladorLocal);
+  var localEnvio = localAtivo;
+
+  // Local vazio — registra uma linha com quantidade 0
+  if(!itens.length){
+    var payloadVazio = {
+      acao:'contagem',
+      invId:       invAtivo?invAtivo.id:'LIVRE',
+      invNome:     invAtivo?invAtivo.nome:'CONTAGEM LIVRE',
+      colaborador: usuarioLogado, tipo:'Monitor',
+      localizacao: localEnvio,
+      itens: [{sku:'', ean:'', produto:'VAZIO', cor:'', tamanho:'', quantidade:0, obs:'LOCAL VAZIO', posicao:''}]
+    };
+  sbPost('contagens',[{
+      inventario:localEnvio,colaborador:usuarioLogado,tipo:'Monitor',
+      sku:'',ean:'',produto:'VAZIO',cor:'',tamanho:'',
+      localizacao:localEnvio,quantidade:0,observacoes:'LOCAL VAZIO',posicao:''
+    }])
+    .then(function(){ })
+    .catch(function(){ adicionarFilaOffline(payloadVazio); })
+    .finally(function(){ if(callback) callback(); });
+    return;
+  }
+
+  // Calcula total de peças e posição de cada item
+  var totalPecas = itens.reduce(function(s,i){ return s+i.qtd; },0);
+  var itensPayload = itens.map(function(item){
+    var obs = item.anomalia ? 'ANOMALIA - VERIFICAR' : (item.cadastrado ? '' : 'NÃO CADASTRADO NA BASE — EAN: '+item.ean);
+    var posicao = '';
+    if(itens.length > 1 && totalPecas > 0){
+      posicao = (item.qtd / totalPecas) > 0.5 ? 'POSIÇÃO CORRETA' : 'ITEM ANOMALIA';
+    }
+    return {
+      sku:item.sku, ean:item.ean, produto:item.produto,
+      cor:item.cor, tamanho:item.tamanho,
+      quantidade:item.qtd, obs:obs, posicao:posicao
+    };
+  });
+
+  // Envia TODOS os itens do local numa única requisição
+  var payloadOffline = {localEnvio:localEnvio,invAtivo:invAtivo,colaborador:usuarioLogado,itens:itensPayload};
+
+  // [removido - substituído por sbPost acima]
+  fetch('__unused__',{method:'POST',body:JSON.stringify(payload)})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(d.ok) toast('✅ '+itensPayload.length+' item(s) registrado(s) em '+localEnvio);
+      else adicionarFilaOffline(payload);
+    })
+    .catch(function(){
+      adicionarFilaOffline(payloadOffline);
+      toast('📵 Sem conexão — salvo na fila offline');
+    })
+    .finally(function(){ if(callback) callback(); });
+}
+
+function registrar(){ fecharLocalAtual(); }
+function mostrarProdutoCard(){}
+
+// ── HISTÓRICO ──────────────────────────────────────────────
+function carregarHistorico(){
+  if(!usuarioLogado) return;
+  var filtro = 'colaborador=eq.'+encodeURIComponent(usuarioLogado)+'&order=criado_em.desc&limit=30';
+  if(invAtivo) filtro += '&inventario=eq.'+encodeURIComponent(invAtivo.nome);
+  sbGet('contagens?'+filtro+'&select=criado_em,inventario,colaborador,sku,ean,produto,cor,tamanho,localizacao,quantidade,observacoes')
+    .then(function(r){ return r.json(); })
+    .then(function(rows){
+      var el = document.getElementById('lista-historico');
+      if(!rows||!rows.length){ el.innerHTML='<div style="font-size:12px;color:var(--txt-s);">Nenhum lançamento ainda</div>'; return; }
+      el.innerHTML = rows.map(function(r){
+        return '<div class="reg-item">'+
+          '<div class="reg-desc">'+
+            '<strong>'+(r.produto||'EAN: '+r.ean)+' · '+r.cor+' · '+r.tamanho+'</strong>'+
+            '<span>📍 '+r.localizacao+' · '+(r.criado_em?r.criado_em.substring(0,16).replace('T',' '):'')+'</span>'+
+            (r.observacoes?'<span style="color:var(--warn-txt);">⚠️ '+r.observacoes+'</span>':'')+
+          '</div>'+
+          '<span class="reg-qtd">'+r.quantidade+'</span>'+
+          '</div>';
+      }).join('');
+    }).catch(function(){});
+}
+
+// ── MASTER ─────────────────────────────────────────────────
+function carregarMasterInventarios(){
+  sbGet('inventarios?select=id,nome,status,criado_em,master,lancamentos&order=criado_em.desc')
+    .then(function(r){ return r.json(); })
+    .then(function(rows){
+      renderMasterInventarios((rows||[]).map(function(r){
+        return {id:r.id,nome:r.nome,status:r.status,
+                criado:r.criado_em?r.criado_em.substring(0,10):'',
+                master:r.master,lancamentos:r.lancamentos||0};
+      }));
+    }).catch(function(){});
+}
+
+function renderMasterInventarios(lista){
+  var el = document.getElementById('master-lista-inv');
+  if(!lista.length){ el.innerHTML='<div style="color:var(--txt-s);font-size:13px;padding:8px 0;">Nenhum inventário criado ainda</div>'; return; }
+  el.innerHTML = lista.map(function(inv){
+    var aberto = inv.status==='ABERTO';
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--lav-l);">'+
+      '<div style="flex:1;"><div style="font-weight:700;font-size:13px;">'+inv.nome+'</div>'+
+      '<div style="font-size:11px;color:var(--txt-s);">'+inv.lancamentos+' lançamentos · '+inv.criado+'</div>'+
+      '<span class="inv-status '+(aberto?'st-aberto':'st-fechado')+'">'+(aberto?'🟢 Aberto':'🔴 Encerrado')+'</span></div>'+
+      (aberto?'<button class="btn btn-danger btn-sm" data-id="'+inv.id+'" data-nome="'+encodeURIComponent(inv.nome)+'">Finalizar</button>':'<span></span>')+
+      '</div>';
+  }).join('');
+  el.querySelectorAll('[data-id]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      finalizarInventario(this.getAttribute('data-id'), decodeURIComponent(this.getAttribute('data-nome')));
+    });
+  });
+}
+
+function criarInventario(){
+  var nome = (document.getElementById('inv-nome').value||'').trim();
+  var file = document.getElementById('inv-file').files[0];
+  if(!nome){ toast('⚠️ Informe o nome'); return; }
+  if(file){
+    var reader = new FileReader();
+    reader.onload = function(e){
+      try{
+        var wb = XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+        var ws = wb.Sheets[wb.SheetNames[0]];
+        var rows = XLSX.utils.sheet_to_json(ws,{defval:''});
+        var itens = rows.map(function(r){
+          var sku  = (r['SKU (Código)']||r['Código']||r['SKU']||'').toString().trim();
+          var prod = (r['PRODUTO (Descrição)']||r['Descrição']||r['PRODUTO']||'').toString().trim();
+          var cor  = normCor((r['Cor']||r['COR']||'').toString().trim());
+          var tam  = (r['Tam']||r['TAMANHO']||'').toString().trim();
+          return sku||prod ? {sku:sku,produto:prod,cor:cor,tamanho:tam} : null;
+        }).filter(Boolean);
+        if(!itens.length){ toast('⚠️ Nenhum item no arquivo'); return; }
+        enviarCriarInventario(nome,itens);
+      } catch(err){ toast('❌ Erro: '+err.message); }
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    enviarCriarInventario(nome,[]);
+  }
+}
+
+function enviarCriarInventario(nome,itens){
+  var invId = 'INV-'+Date.now();
+  sbPost('inventarios',{id:invId,nome:nome,status:'ABERTO',master:usuarioLogado,lancamentos:0})
+    .then(function(r){ return r.json(); })
+    .then(function(rows){
+      if(itens.length>0){
+        var batch = itens.map(function(it){
+          return {inventario_id:invId,inventario_nome:nome,sku:it.sku||'',produto:it.produto||'',cor:it.cor||'',tamanho:it.tamanho||''};
+        });
+        return sbPost('listas_itens',batch).then(function(){ return rows; });
+      }
+      return rows;
+    })
+    .then(function(){ toast('✅ Inventário criado!'); document.getElementById('inv-nome').value=''; document.getElementById('inv-file').value=''; carregarMasterInventarios(); })
+    .catch(function(e){ toast('❌ Erro: '+e.message); });
+}
+
+function finalizarInventario(id,nome){
+  if(!confirm('Finalizar "'+nome+'"?')) return;
+  sbPatch('inventarios','id=eq.'+encodeURIComponent(id),{status:'FECHADO',fechado_em:new Date().toISOString()})
+    .then(function(){ toast('✅ Inventário finalizado!'); carregarMasterInventarios(); })
+    .catch(function(e){ toast('❌ Erro: '+e.message); });
+}
+
+// ── FILA OFFLINE ───────────────────────────────────────────
+function adicionarFilaOffline(payload){
+  filaOffline.push(payload);
+  try{ localStorage.setItem('monitor_fila',JSON.stringify(filaOffline)); }catch(e){}
+  atualizarBadgeFila();
+}
+function atualizarBadgeFila(){
+  var b=document.getElementById('badge-fila');
+  if(!b) return;
+  if(filaOffline.length>0){ b.style.display=''; b.textContent='⏳ '+filaOffline.length+' pendente(s)'; }
+  else b.style.display='none';
+}
+function tentarEnviarFila(){
+  if(!filaOffline.length||!navigator.onLine) return;
+  var item=filaOffline[0];
+  // Reenvia lote offline para Supabase
+  var linhasOffline = (item.itens||[]).map(function(it){
+    return {
+      inventario:  item.invAtivo?item.invAtivo.nome:'CONTAGEM LIVRE',
+      colaborador: item.colaborador||usuarioLogado,
+      tipo:'Monitor',
+      sku:it.sku||'',ean:it.ean||'',produto:it.produto||'',
+      cor:it.cor||'',tamanho:it.tamanho||'',
+      localizacao:item.localEnvio||'',
+      quantidade:Number(it.quantidade)||0,
+      observacoes:it.obs||'',posicao:it.posicao||''
+    };
+  });
+  sbPost('contagens', linhasOffline.length ? linhasOffline : [{}])
+    .then(function(r){
+      if(r.ok||r.status===201){
+        filaOffline.shift();
+        try{ localStorage.setItem('monitor_fila',JSON.stringify(filaOffline)); }catch(e){}
+        atualizarBadgeFila();
+        if(filaOffline.length>0) setTimeout(tentarEnviarFila,500);
+        else toast('✅ Lançamentos offline enviados!');
+      }
+    }).catch(function(){});
+}
+window.addEventListener('online',function(){ if(filaOffline.length>0){ toast('🌐 Internet voltou! Enviando...'); setTimeout(tentarEnviarFila,1000); } });
+setInterval(function(){ if(navigator.onLine&&filaOffline.length>0) tentarEnviarFila(); },30000);
+
+// ── UTILITÁRIOS ────────────────────────────────────────────
+function normCor(c){
+  if(!c) return '';
+  var m = c.toString().trim().match(/^\d+\s*-\s*(.+)$/);
+  return m ? m[1].trim() : c.toString().trim();
+}
+
+function baixarModelo(){
+  var b64="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";
+  var bin=atob(b64),buf=new Uint8Array(bin.length);
+  for(var i=0;i<bin.length;i++) buf[i]=bin.charCodeAt(i);
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+  a.download='modelo_lista_contagem.xlsx'; a.click();
+}
+
+function toastLocalFinalizado(local){
+  // Cria overlay visual grande por 1 segundo
+  var el = document.createElement('div');
+  el.style.cssText = 'position:fixed;inset:0;background:rgba(15,110,86,.92);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;animation:fadein .15s ease;';
+  el.innerHTML = '<div style="font-size:56px;margin-bottom:12px;">✅</div>'+
+    '<div style="font-size:22px;font-weight:900;color:#fff;letter-spacing:1px;">LOCAL FINALIZADO</div>'+
+    '<div style="font-size:18px;font-weight:700;color:rgba(255,255,255,.85);margin-top:8px;">'+local+'</div>';
+  document.body.appendChild(el);
+  setTimeout(function(){ el.style.opacity='0'; el.style.transition='opacity .2s'; }, 800);
+  setTimeout(function(){ document.body.removeChild(el); }, 1100);
+}
+
+function toast(msg){
+  var el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  setTimeout(function(){ el.classList.remove('show'); },3000);
+}
+
+// ── CÂMERA QR (foto estática — funciona em Android e iOS) ──
+function abrirCamera(alvo){
+  document.getElementById(alvo==='local' ? 'camera-local' : 'camera-ean').click();
+}
+
+function processarFotoQR(input, alvo){
+  var file = input.files[0];
+  if(!file) return;
+  toast('📷 Lendo QR Code...');
+  var img = new Image();
+  var url = URL.createObjectURL(file);
+  img.onload = function(){
+    var canvas = document.getElementById('camera-canvas');
+    // Escala a imagem para máx 1024px mantendo proporção
+    var maxDim = 1024;
+    var scale = Math.min(maxDim/img.width, maxDim/img.height, 1);
+    canvas.width  = Math.round(img.width  * scale);
+    canvas.height = Math.round(img.height * scale);
+    var ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    URL.revokeObjectURL(url);
+    var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+    // Tenta BarcodeDetector (nativo Android/Chrome) primeiro
+    if(window.BarcodeDetector){
+      var bd = new BarcodeDetector({formats:['qr_code']});
+      var imgBitmap = createImageBitmap(file).then(function(bmp){
+        bd.detect(bmp).then(function(codes){
+          if(codes.length>0){
+            aplicarQR(codes[0].rawValue, alvo);
+          } else {
+            // Fallback para jsQR se disponível
+            tentarJsQR(imageData, alvo);
+          }
+        }).catch(function(){ tentarJsQR(imageData, alvo); });
+      });
+    } else {
+      tentarJsQR(imageData, alvo);
+    }
+    // Limpa input para permitir nova leitura da mesma imagem
+    input.value = '';
+  };
+  img.src = url;
+}
+
+function tentarJsQR(imageData, alvo){
+  if(window.jsQR){
+    var code = jsQR(imageData.data, imageData.width, imageData.height, {inversionAttempts:'attemptBoth'});
+    if(code){ aplicarQR(code.data, alvo); return; }
+  }
+  toast('⚠️ QR não identificado — tente aproximar mais a câmera');
+}
+
+function aplicarQR(val, alvo){
+  val = val.trim();
+  if(alvo==='local'){
+    document.getElementById('inp-local-cel').value = val.toUpperCase();
+    confirmarLocalCelular();
+  } else {
+    document.getElementById('inp-ean-cel').value = val;
+    confirmarEanCelular();
+  }
+}
+</script>
+
+<!-- INPUTS CÂMERA (ocultos) -->
+<input type="file" id="camera-local" accept="image/*" capture="environment" style="display:none;" onchange="processarFotoQR(this,'local')">
+<input type="file" id="camera-ean"   accept="image/*" capture="environment" style="display:none;" onchange="processarFotoQR(this,'ean')">
+<canvas id="camera-canvas" style="display:none;"></canvas>
+
+</body>
+</html>
