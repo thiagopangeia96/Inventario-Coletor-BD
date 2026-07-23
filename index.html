@@ -828,8 +828,61 @@ function enviarCriarInventario(nome,itens){
 
 function finalizarInventario(id,nome){
   if(!confirm('Finalizar "'+nome+'"?')) return;
-  sbPatch('inventarios','id=eq.'+encodeURIComponent(id),{status:'FECHADO',fechado_em:new Date().toISOString()})
-    .then(function(){ toast('✅ Inventário finalizado!'); carregarMasterInventarios(); })
+
+  // 1. Busca itens do lote
+  sbGet('listas_itens?inventario_id=eq.'+encodeURIComponent(id)+'&select=sku,produto,cor,tamanho')
+    .then(function(itensLote){
+      // 2. Busca contagens já realizadas neste inventário
+      return sbGet('contagens?inventario=eq.'+encodeURIComponent(nome)+'&select=produto,cor,tamanho,colaborador')
+        .then(function(contagens){
+          // 3. Monta set de itens já contados
+          var contados = {};
+          contagens.forEach(function(c){
+            var k = (c.produto+'|||'+c.cor+'|||'+c.tamanho).toLowerCase();
+            contados[k] = true;
+          });
+
+          // 4. Filtra itens não contados
+          var naoContados = itensLote.filter(function(item){
+            var k = (item.produto+'|||'+item.cor+'|||'+item.tamanho).toLowerCase();
+            return !contados[k];
+          });
+
+          // 5. Insere linhas de NÃO CONTADO se houver
+          if(naoContados.length > 0){
+            var agora = new Date().toISOString();
+            var linhas = naoContados.map(function(item){
+              return {
+                inventario:  nome,
+                colaborador: 'SISTEMA',
+                tipo:        'Monitor',
+                sku:         item.sku||'',
+                ean:         '',
+                produto:     item.produto||'',
+                cor:         item.cor||'',
+                tamanho:     item.tamanho||'',
+                localizacao: '',
+                quantidade:  0,
+                observacoes: 'NÃO CONTADO FISICAMENTE',
+                posicao:     '',
+                criado_em:   agora
+              };
+            });
+            return sbPost('contagens', linhas).then(function(){ return naoContados.length; });
+          }
+          return 0;
+        });
+    })
+    .then(function(naoContados){
+      // 6. Finaliza o inventário
+      return sbPatch('inventarios','id=eq.'+encodeURIComponent(id),{status:'FECHADO',fechado_em:new Date().toISOString()})
+        .then(function(){
+          var msg = '✅ Inventário finalizado!';
+          if(naoContados > 0) msg += ' '+naoContados+' item(s) registrado(s) como não contado.';
+          toast(msg);
+          carregarMasterInventarios();
+        });
+    })
     .catch(function(e){ toast('❌ Erro: '+e.message); });
 }
 
