@@ -635,53 +635,56 @@ function enviarAcumulador(callback){
   var itens = Object.values(acumuladorLocal);
   var localEnvio = localAtivo;
 
-  // Local vazio — registra uma linha com quantidade 0
+  // Local vazio
   if(!itens.length){
-    var payloadVazio = {
-      acao:'contagem',
-      invId:       invAtivo?invAtivo.id:'LIVRE',
-      invNome:     invAtivo?invAtivo.nome:'CONTAGEM LIVRE',
-      colaborador: usuarioLogado, tipo:'Monitor',
-      localizacao: localEnvio,
-      itens: [{sku:'', ean:'', produto:'VAZIO', cor:'', tamanho:'', quantidade:0, obs:'LOCAL VAZIO', posicao:''}]
-    };
-  sbPost('contagens',[{
-      inventario:localEnvio,colaborador:usuarioLogado,tipo:'Monitor',
-      sku:'',ean:'',produto:'VAZIO',cor:'',tamanho:'',
-      localizacao:localEnvio,quantidade:0,observacoes:'LOCAL VAZIO',posicao:''
+    sbPost('contagens',[{
+      inventario:   invAtivo?invAtivo.nome:'CONTAGEM LIVRE',
+      colaborador:  usuarioLogado, tipo:'Monitor',
+      sku:'', ean:'', produto:'VAZIO', cor:'', tamanho:'',
+      localizacao:  localEnvio, quantidade:0,
+      observacoes: 'LOCAL VAZIO', posicao:''
     }])
-    .then(function(){ })
-    .catch(function(){ adicionarFilaOffline(payloadVazio); })
+    .catch(function(){})
     .finally(function(){ if(callback) callback(); });
     return;
   }
 
-  // Calcula total de peças e posição de cada item
+  // Calcula posição de cada item
   var totalPecas = itens.reduce(function(s,i){ return s+i.qtd; },0);
-  var itensPayload = itens.map(function(item){
+  var linhas = itens.map(function(item){
     var obs = item.anomalia ? 'ANOMALIA - VERIFICAR' : (item.cadastrado ? '' : 'NÃO CADASTRADO NA BASE — EAN: '+item.ean);
     var posicao = '';
     if(itens.length > 1 && totalPecas > 0){
       posicao = (item.qtd / totalPecas) > 0.5 ? 'POSIÇÃO CORRETA' : 'ITEM ANOMALIA';
     }
     return {
+      inventario:  invAtivo?invAtivo.nome:'CONTAGEM LIVRE',
+      colaborador: usuarioLogado, tipo:'Monitor',
       sku:item.sku, ean:item.ean, produto:item.produto,
       cor:item.cor, tamanho:item.tamanho,
-      quantidade:item.qtd, obs:obs, posicao:posicao
+      localizacao: localEnvio,
+      quantidade:  item.qtd,
+      observacoes: obs,
+      posicao:     posicao
     };
   });
 
-  // Envia TODOS os itens do local numa única requisição
-  var payloadOffline = {localEnvio:localEnvio,invAtivo:invAtivo,colaborador:usuarioLogado,itens:itensPayload};
-
-  // [removido - substituído por sbPost acima]
-  fetch('__unused__',{method:'POST',body:JSON.stringify(payload)})
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      if(d.ok) toast('✅ '+itensPayload.length+' item(s) registrado(s) em '+localEnvio);
-      else adicionarFilaOffline(payload);
+  sbPost('contagens', linhas)
+    .then(function(r){
+      if(r.ok || r.status===201){
+        toast('✅ '+linhas.length+' item(s) registrado(s) em '+localEnvio);
+        if(invAtivo){
+          sbPatch('inventarios','id=eq.'+encodeURIComponent(invAtivo.id),
+            {lancamentos: (invAtivo.lancamentos||0) + linhas.length});
+        }
+      } else {
+        var payloadOffline = {localEnvio:localEnvio,invAtivo:invAtivo,colaborador:usuarioLogado,itens:linhas};
+        adicionarFilaOffline(payloadOffline);
+        toast('⚠️ Erro ao salvar — adicionado à fila offline');
+      }
     })
     .catch(function(){
+      var payloadOffline = {localEnvio:localEnvio,invAtivo:invAtivo,colaborador:usuarioLogado,itens:linhas};
       adicionarFilaOffline(payloadOffline);
       toast('📵 Sem conexão — salvo na fila offline');
     })
