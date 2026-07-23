@@ -832,9 +832,11 @@ function finalizarInventario(id,nome){
   // 1. Busca itens do lote
   sbGet('listas_itens?inventario_id=eq.'+encodeURIComponent(id)+'&select=sku,produto,cor,tamanho')
     .then(function(itensLote){
+      console.log('Itens do lote:', itensLote.length, JSON.stringify(itensLote.slice(0,2)));
       // 2. Busca contagens já realizadas neste inventário
-      return sbGet('contagens?inventario=eq.'+encodeURIComponent(nome)+'&select=produto,cor,tamanho,colaborador')
+      return sbGet('contagens?inventario=eq.'+encodeURIComponent(nome)+'&select=produto,cor,tamanho&limit=1000')
         .then(function(contagens){
+          console.log('Contagens:', contagens.length);
           // 3. Monta set de itens já contados
           var contados = {};
           contagens.forEach(function(c){
@@ -864,11 +866,19 @@ function finalizarInventario(id,nome){
                 localizacao: '',
                 quantidade:  0,
                 observacoes: 'NÃO CONTADO FISICAMENTE',
-                posicao:     '',
-                criado_em:   agora
+                posicao:     ''
               };
             });
-            return sbPost('contagens', linhas).then(function(){ return naoContados.length; });
+            return sbPost('contagens', linhas)
+              .then(function(r){
+                if(r.status === 201 || r.ok){
+                  return naoContados.length;
+                }
+                return r.text().then(function(t){
+                  console.error('Supabase error:', t);
+                  throw new Error('Erro ao inserir não contados: '+t);
+                });
+              });
           }
           return 0;
         });
