@@ -635,33 +635,49 @@ function enviarAcumulador(callback){
   var itens = Object.values(acumuladorLocal);
   var localEnvio = localAtivo;
 
-  // Local vazio
+  // Local vazio — registra quantidade 0
   if(!itens.length){
     sbPost('contagens',[{
-      inventario:   invAtivo?invAtivo.nome:'CONTAGEM LIVRE',
-      colaborador:  usuarioLogado, tipo:'Monitor',
+      inventario:  invAtivo?invAtivo.nome:'CONTAGEM LIVRE',
+      colaborador: usuarioLogado,
+      tipo:        'Monitor',
       sku:'', ean:'', produto:'VAZIO', cor:'', tamanho:'',
-      localizacao:  localEnvio, quantidade:0,
-      observacoes: 'LOCAL VAZIO', posicao:''
+      localizacao: localEnvio,
+      quantidade:  0,
+      observacoes: 'LOCAL VAZIO',
+      posicao:     ''
     }])
     .catch(function(){})
     .finally(function(){ if(callback) callback(); });
     return;
   }
 
-  // Calcula posição de cada item
-  var totalPecas = itens.reduce(function(s,i){ return s+i.qtd; },0);
+  // Calcula total de peças e posição de cada item
+  var totalPecas = itens.reduce(function(s,i){ return s+i.qtd; }, 0);
+
   var linhas = itens.map(function(item){
-    var obs = item.anomalia ? 'ANOMALIA - VERIFICAR' : (item.cadastrado ? '' : 'NÃO CADASTRADO NA BASE — EAN: '+item.ean);
+    // obs: anomalia tem prioridade, depois não cadastrado, depois vazio
+    var obs = '';
+    if(item.anomalia){
+      obs = 'ANOMALIA - VERIFICAR';
+    } else if(!item.cadastrado){
+      obs = 'NÃO CADASTRADO NA BASE — EAN: '+item.ean;
+    }
+
     var posicao = '';
     if(itens.length > 1 && totalPecas > 0){
       posicao = (item.qtd / totalPecas) > 0.5 ? 'POSIÇÃO CORRETA' : 'ITEM ANOMALIA';
     }
+
     return {
       inventario:  invAtivo?invAtivo.nome:'CONTAGEM LIVRE',
-      colaborador: usuarioLogado, tipo:'Monitor',
-      sku:item.sku, ean:item.ean, produto:item.produto,
-      cor:item.cor, tamanho:item.tamanho,
+      colaborador: usuarioLogado,
+      tipo:        'Monitor',
+      sku:         item.sku||'',
+      ean:         item.ean||'',
+      produto:     item.produto||'',
+      cor:         item.cor||'',
+      tamanho:     item.tamanho||'',
       localizacao: localEnvio,
       quantidade:  item.qtd,
       observacoes: obs,
@@ -678,14 +694,14 @@ function enviarAcumulador(callback){
             {lancamentos: (invAtivo.lancamentos||0) + linhas.length});
         }
       } else {
-        var payloadOffline = {localEnvio:localEnvio,invAtivo:invAtivo,colaborador:usuarioLogado,itens:linhas};
-        adicionarFilaOffline(payloadOffline);
+        var off = {localEnvio:localEnvio,invAtivo:invAtivo,colaborador:usuarioLogado,itens:linhas};
+        adicionarFilaOffline(off);
         toast('⚠️ Erro ao salvar — adicionado à fila offline');
       }
     })
     .catch(function(){
-      var payloadOffline = {localEnvio:localEnvio,invAtivo:invAtivo,colaborador:usuarioLogado,itens:linhas};
-      adicionarFilaOffline(payloadOffline);
+      var off = {localEnvio:localEnvio,invAtivo:invAtivo,colaborador:usuarioLogado,itens:linhas};
+      adicionarFilaOffline(off);
       toast('📵 Sem conexão — salvo na fila offline');
     })
     .finally(function(){ if(callback) callback(); });
