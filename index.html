@@ -577,6 +577,8 @@ function confirmarEan(ean){
   if(!ean) return;
   var info = EAN_LOOKUP[ean];
   var cadastrado = !!info;
+  var temAnomaliaNoLocal = false;
+
   if(primeiroEanLocal && ean !== primeiroEanLocal){
     var nomeNovo = cadastrado ? info.produto+' · '+info.cor+' · '+info.tamanho : 'EAN '+ean;
     var it0 = acumuladorLocal[primeiroEanLocal];
@@ -587,13 +589,17 @@ function confirmarEan(ean){
     Object.keys(acumuladorLocal).forEach(function(k){
       acumuladorLocal[k].anomalia = true;
     });
+    temAnomaliaNoLocal = true;
   }
-  // Se já tem anomalia no local, marca o item atual também
-  if(Object.keys(acumuladorLocal).some(function(k){ return acumuladorLocal[k].anomalia; })){
-    // NÃO cria item vazio aqui — deixa o bloco abaixo criar com dados corretos
-    if(acumuladorLocal[ean]) acumuladorLocal[ean].anomalia = true;
+
+  // Verifica se já havia anomalia antes deste bip
+  if(!temAnomaliaNoLocal){
+    temAnomaliaNoLocal = Object.keys(acumuladorLocal).some(function(k){ return acumuladorLocal[k].anomalia; });
   }
+
   if(!primeiroEanLocal) primeiroEanLocal = ean;
+
+  // Cria item se não existe (com dados corretos)
   if(!acumuladorLocal[ean]){
     acumuladorLocal[ean] = {
       sku: cadastrado?info.sku:'', produto: cadastrado?info.produto:'',
@@ -601,6 +607,12 @@ function confirmarEan(ean){
       ean: ean, cadastrado: cadastrado, qtd: 0
     };
   }
+
+  // Marca anomalia APÓS criar o item
+  if(temAnomaliaNoLocal){
+    acumuladorLocal[ean].anomalia = true;
+  }
+
   acumuladorLocal[ean].qtd++;
   renderItensLocal();
   var nome = cadastrado ? info.produto+' '+info.cor+' '+info.tamanho : 'EAN '+ean;
